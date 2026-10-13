@@ -1,0 +1,1700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#121820">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Rink Board</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%23121820' width='32' height='32' rx='6'/%3E%3Crect x='4' y='8' width='24' height='16' rx='5' fill='%23f4f7fb'/%3E%3Cpath stroke='%23c8102e' stroke-width='1.2' d='M16 8v16M9 8v16M23 8v16'/%3E%3Cpath stroke='%23003da5' stroke-width='1.6' d='M12.5 8v16M19.5 8v16'/%3E%3C/svg%3E">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    background: #121820;
+    color: #e8eef7;
+    font: 600 12px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    overscroll-behavior: none;
+  }
+  input, textarea { user-select: text; -webkit-user-select: text; font: inherit; }
+  button, input { font-family: inherit; }
+  #app { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  #stage { position: relative; flex: 1; min-width: 0; min-height: 0; touch-action: none; order: 0; }
+  #bar { order: 1; }
+  #ice { width: 100%; height: 100%; display: block; touch-action: none; }
+  #bar {
+    flex: none;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    height: 64px;
+    padding: 6px;
+    background: #121820;
+    overflow-x: auto;
+    overflow-y: hidden;
+    touch-action: pan-x;
+  }
+  #bar::-webkit-scrollbar { height: 4px; width: 4px; }
+  #bar::-webkit-scrollbar-thumb { background: #3a4658; border-radius: 4px; }
+  #name {
+    width: 132px;
+    height: 48px;
+    flex: none;
+    border: 0;
+    border-radius: 8px;
+    background: #243140;
+    color: #fff;
+    font-size: 16px;
+    padding: 0 8px;
+  }
+  #bar button {
+    flex: none;
+    min-width: 48px;
+    height: 48px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 10px;
+    background: #243140;
+    color: #e8eef7;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  #bar button.active { background: #e2b340; color: #1c1404; }
+  #bar button.armed { background: #c8102e; color: #fff; }
+  #bar button:disabled { opacity: 0.35; }
+  #bar button.team-them { background: #f4f7fb; color: #17315c; }
+  #bar button.team-them.active { background: #e2b340; color: #1c1404; }
+  #bar button.swatch { box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); }
+  #bar button.swatch.active { box-shadow: inset 0 0 0 3px #fff; }
+  #gate {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: #121820;
+    color: #f4f7fb;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+    gap: 12px;
+  }
+  #gate h1 { margin: 0; font-size: 28px; font-weight: 800; }
+  #gate p { margin: 0; font-size: 18px; font-weight: 600; color: #c5d0de; }
+  @media (max-width: 700px) and (orientation: portrait) {
+    #gate { display: flex; }
+    #app { visibility: hidden; }
+  }
+  @media (orientation: landscape) {
+    #app { flex-direction: row; }
+    #bar {
+      width: 124px;
+      height: auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-auto-rows: 46px;
+      align-content: start;
+      gap: 4px;
+      overflow-x: hidden;
+      overflow-y: auto;
+      touch-action: pan-y;
+      padding: 6px;
+    }
+    #name, .span2 { grid-column: 1 / -1; }
+    #name { width: 100%; height: 42px; }
+    #bar button { width: 100%; min-width: 0; height: 46px; padding: 0 2px; }
+  }
+  @media (orientation: landscape) and (max-height: 520px) {
+    #app { flex-direction: column; }
+    #bar {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      width: auto;
+      height: 58px;
+      grid-template-columns: none;
+      grid-auto-rows: auto;
+      overflow-x: auto;
+      overflow-y: hidden;
+      touch-action: pan-x;
+    }
+    #name, .span2 { grid-column: auto; width: auto; }
+    #name { width: 112px; height: 44px; }
+    #bar button { width: auto; min-width: 44px; height: 44px; padding: 0 8px; }
+  }
+  .sheet {
+    position: absolute;
+    z-index: 6;
+    display: none;
+    background: #f7f9fc;
+    color: #172033;
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  }
+  .sheet.open { display: flex; }
+  #notesheet {
+    left: 8px; right: 8px; top: 8px;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+  }
+  #notes {
+    width: 100%;
+    min-height: 96px;
+    resize: vertical;
+    border: 1px solid #d5dde8;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #172033;
+  }
+  #textbar {
+    left: 8px; right: 8px; top: 8px;
+    gap: 8px;
+    padding: 8px;
+    align-items: center;
+  }
+  #textbar input {
+    flex: 1;
+    height: 44px;
+    border: 1px solid #d5dde8;
+    border-radius: 8px;
+    padding: 0 10px;
+    font-size: 16px;
+    color: #172033;
+  }
+  #sheet {
+    inset: 10px;
+    flex-direction: column;
+    padding: 12px;
+    gap: 8px;
+  }
+  .sheet-head, .sheet-actions { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+  .sheet h2 { margin: 0; font-size: 18px; }
+  .sheet button, #textbar button {
+    height: 44px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 10px;
+    background: #17315c;
+    color: #fff;
+    font-weight: 700;
+  }
+  #drill-list { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; }
+  #drill-list button {
+    width: 100%;
+    text-align: left;
+    background: #fff;
+    color: #172033;
+    border: 1px solid #d5dde8;
+    margin-bottom: 6px;
+  }
+  #drill-list button.current { border-color: #e2b340; background: #fff8e6; }
+  #drill-list .empty { padding: 12px; color: #526173; font-weight: 600; }
+  #toast {
+    position: absolute;
+    left: 50%;
+    bottom: 12px;
+    transform: translateX(-50%);
+    background: #121820;
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 999px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 7;
+    white-space: nowrap;
+  }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+  <div id="gate">
+    <h1>Rink Board</h1>
+    <p>Turn your phone sideways</p>
+  </div>
+  <div id="app">
+    <div id="bar">
+      <input id="name" aria-label="Drill name" maxlength="60" autocomplete="off">
+      <button type="button" data-act="view" data-view="half">Half</button>
+      <button type="button" data-act="view" data-view="zone">Zone</button>
+      <button type="button" data-act="view" data-view="three">3/4</button>
+      <button type="button" data-act="view" data-view="neutral">Neutral</button>
+      <button type="button" data-act="view" data-view="full">Full</button>
+      <button type="button" data-act="flip" aria-label="Flip ends">Flip</button>
+      <button type="button" data-act="tool" data-tool="select">Select</button>
+      <button type="button" data-act="tool" data-tool="erase" aria-label="Erase tool. Tap objects to remove them.">Erase</button>
+      <button type="button" data-act="delete" aria-label="Delete selected">Delete</button>
+      <button type="button" data-act="clear">Clear</button>
+      <button type="button" data-act="undo">Undo</button>
+      <button type="button" data-act="redo">Redo</button>
+      <button type="button" data-act="tool" data-tool="skate">Skate</button>
+      <button type="button" data-act="tool" data-tool="carry" aria-label="Skate with puck">Carry</button>
+      <button type="button" data-act="tool" data-tool="pass">Pass</button>
+      <button type="button" data-act="tool" data-tool="shot">Shot</button>
+      <button type="button" data-act="tool" data-tool="draw">Draw</button>
+      <button type="button" class="swatch" data-act="color" data-color="#1a1a1a" style="background:#1a1a1a" aria-label="Black"></button>
+      <button type="button" class="swatch" data-act="color" data-color="#c8102e" style="background:#c8102e" aria-label="Red"></button>
+      <button type="button" class="swatch" data-act="color" data-color="#1f4fd8" style="background:#1f4fd8" aria-label="Blue"></button>
+      <button type="button" class="swatch" data-act="color" data-color="#1e8a3a" style="background:#1e8a3a" aria-label="Green"></button>
+      <button type="button" class="swatch" data-act="color" data-color="#ef8a14" style="background:#ef8a14" aria-label="Orange"></button>
+      <button type="button" data-act="team" id="team-btn">Us</button>
+      <button type="button" data-act="labels" id="label-btn" aria-label="Toggle position labels">Pos</button>
+      <button type="button" data-act="place" data-type="skater" data-role="G" data-set="positions">G</button>
+      <button type="button" data-act="place" data-type="skater" data-role="LD" data-set="positions">LD</button>
+      <button type="button" data-act="place" data-type="skater" data-role="RD" data-set="positions">RD</button>
+      <button type="button" data-act="place" data-type="skater" data-role="LW" data-set="positions">LW</button>
+      <button type="button" data-act="place" data-type="skater" data-role="C" data-set="positions">C</button>
+      <button type="button" data-act="place" data-type="skater" data-role="RW" data-set="positions">RW</button>
+      <button type="button" data-act="place" data-type="skater" data-role="G" data-set="units">G</button>
+      <button type="button" data-act="place" data-type="skater" data-role="D1" data-set="units">D1</button>
+      <button type="button" data-act="place" data-type="skater" data-role="D2" data-set="units">D2</button>
+      <button type="button" data-act="place" data-type="skater" data-role="F1" data-set="units">F1</button>
+      <button type="button" data-act="place" data-type="skater" data-role="F2" data-set="units">F2</button>
+      <button type="button" data-act="place" data-type="skater" data-role="F3" data-set="units">F3</button>
+      <button type="button" data-act="place" data-type="puck">Puck</button>
+      <button type="button" data-act="place" data-type="cone">Cone</button>
+      <button type="button" data-act="place" data-type="net">Net</button>
+      <button type="button" data-act="place" data-type="tire">Tire</button>
+      <button type="button" data-act="place" data-type="text">Text</button>
+      <button type="button" data-act="notes">Notes</button>
+      <button type="button" data-act="save">Save</button>
+      <button type="button" data-act="drills">Drills</button>
+      <button type="button" data-act="png" aria-label="Export image">Image</button>
+      <button type="button" data-act="export" aria-label="Export drills">Export</button>
+      <button type="button" data-act="import" aria-label="Import drills">Import</button>
+    </div>
+    <div id="stage">
+      <canvas id="ice"></canvas>
+      <div id="toast" role="status" aria-live="polite"></div>
+      <div id="notesheet" class="sheet">
+        <textarea id="notes" placeholder="Setup, cues, rotation" aria-label="Drill notes"></textarea>
+        <div class="sheet-actions"><button type="button" data-act="close-notes">Done</button></div>
+      </div>
+      <form id="textbar" class="sheet">
+        <input id="textinput" maxlength="40" placeholder="Label" aria-label="Text label" enterkeyhint="done">
+        <button type="submit">Place</button>
+        <button type="button" id="textcancel">Cancel</button>
+      </form>
+      <div id="sheet" class="sheet">
+        <div class="sheet-head">
+          <h2>Drills</h2>
+          <button type="button" data-act="close-drills">Close</button>
+        </div>
+        <ul id="drill-list"></ul>
+        <div class="sheet-actions">
+          <button type="button" data-act="new">New</button>
+          <button type="button" data-act="duplicate">Duplicate</button>
+          <button type="button" data-act="delete-drill">Delete</button>
+          <button type="button" data-act="clear-list" id="clear-list">Clear list</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <input id="import-file" type="file" accept="application/json,.json" hidden>
+<script>
+(function () {
+  "use strict";
+
+  // Rink is 200 x 85 feet. Origin is the near-left corner before flip.
+  // Flip stores the other end's window and mirrors x so that end's boards sit on the left.
+  var RINK_L = 200;
+  var RINK_W = 85;
+  var VIEWS = {
+    half: [0, 100],
+    zone: [0, 75],
+    three: [0, 125],
+    neutral: [46, 108],
+    full: [0, 200]
+  };
+  var DEFENSE = { LD: 1, RD: 1, D1: 1, D2: 1 };
+  var RED = "#c8102e";
+  var BLUE = "#003da5";
+  var ICE = "#f4f7fb";
+  var NAVY = "#17315c";
+  var GOALIE = "#aeb6bf";
+  var LIB_KEY = "rink-board-drills";
+  var CUR_KEY = "rink-board-current";
+  var MARKS = { skate: 1, carry: 1, pass: 1, shot: 1, draw: 1 };
+
+  var ice = document.getElementById("ice");
+  var stage = document.getElementById("stage");
+  var nameInput = document.getElementById("name");
+  var notesInput = document.getElementById("notes");
+  var toastEl = document.getElementById("toast");
+  var params = new URLSearchParams(location.search);
+  var persistOn = !params.has("selftest") && !params.has("demo");
+
+  var doc = blank();
+  var library = [];
+  var undoStack = [];
+  var redoStack = [];
+  var state = {
+    tool: "select",
+    placeType: null,
+    placeRole: null,
+    team: "us",
+    color: "#1a1a1a",
+    selected: null,
+    preview: null,
+    cssW: 1,
+    cssH: 1,
+    dpr: 1
+  };
+  var pointers = new Map();
+  var gesture = null;
+  var pinch = null;
+  var lockout = false;
+  var clearArmed = false;
+  var clearTimer = null;
+  var listArmed = false;
+  var listTimer = null;
+  var textAt = null;
+  var noteBurst = false;
+  var noteTimer = null;
+  var toastTimer = null;
+
+  function uid() {
+    return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-3);
+  }
+  function num(v, fallback) {
+    return typeof v === "number" && isFinite(v) ? v : fallback;
+  }
+  function clone(v) {
+    return JSON.parse(JSON.stringify(v));
+  }
+  function homeCamera(view, flip) {
+    var spec = VIEWS[view] || VIEWS.half;
+    var x = spec[0];
+    var w = spec[1];
+    if (flip) x = RINK_L - x - w;
+    return { x: x, y: 0, w: w, h: RINK_W };
+  }
+  function blank() {
+    return {
+      id: uid(),
+      name: "New drill",
+      view: "half",
+      flip: false,
+      labelSet: "positions",
+      camera: homeCamera("half", false),
+      notes: "",
+      pieces: [],
+      marks: []
+    };
+  }
+  function validPiece(p) {
+    return p && typeof p.id === "string" && typeof p.type === "string" &&
+      typeof p.x === "number" && typeof p.y === "number";
+  }
+  function validMark(m) {
+    return m && typeof m.id === "string" && MARKS[m.type] && Array.isArray(m.points) && m.points.length >= 2;
+  }
+  function normalize(raw) {
+    var d = raw && typeof raw === "object" ? raw : {};
+    var view = VIEWS[d.view] ? d.view : "half";
+    var flip = !!d.flip;
+    var cam = d.camera && typeof d.camera.w === "number" ? d.camera : homeCamera(view, flip);
+    return {
+      id: typeof d.id === "string" && d.id ? d.id : uid(),
+      name: typeof d.name === "string" && d.name ? d.name : "New drill",
+      view: view,
+      flip: flip,
+      labelSet: d.labelSet === "units" ? "units" : "positions",
+      camera: {
+        x: num(cam.x, 0),
+        y: num(cam.y, 0),
+        w: Math.max(10, num(cam.w, 100)),
+        h: Math.max(10, num(cam.h, RINK_W))
+      },
+      notes: typeof d.notes === "string" ? d.notes : "",
+      pieces: Array.isArray(d.pieces) ? d.pieces.filter(validPiece) : [],
+      marks: Array.isArray(d.marks) ? d.marks.filter(validMark) : []
+    };
+  }
+
+  function snapshot() {
+    return JSON.stringify({ pieces: doc.pieces, marks: doc.marks, notes: doc.notes });
+  }
+  function applySnapshot(raw) {
+    var data = JSON.parse(raw);
+    doc.pieces = data.pieces;
+    doc.marks = data.marks;
+    doc.notes = data.notes;
+    notesInput.value = doc.notes;
+    state.selected = null;
+    state.preview = null;
+  }
+  function pushHistory() {
+    undoStack.push(snapshot());
+    if (undoStack.length > 50) undoStack.shift();
+    redoStack = [];
+    syncHistoryButtons();
+  }
+  function undo() {
+    if (!undoStack.length) return;
+    redoStack.push(snapshot());
+    applySnapshot(undoStack.pop());
+    syncHistoryButtons();
+    persist();
+    draw();
+  }
+  function redo() {
+    if (!redoStack.length) return;
+    undoStack.push(snapshot());
+    applySnapshot(redoStack.pop());
+    syncHistoryButtons();
+    persist();
+    draw();
+  }
+  function resetHistory() {
+    undoStack = [];
+    redoStack = [];
+    syncHistoryButtons();
+  }
+  function persist() {
+    if (!persistOn) return;
+    try { localStorage.setItem(CUR_KEY, JSON.stringify(doc)); } catch (e) { toast("Could not save on this device"); }
+  }
+  function persistLibrary() {
+    if (!persistOn) return;
+    try { localStorage.setItem(LIB_KEY, JSON.stringify(library)); } catch (e) { toast("Could not save the drill list"); }
+  }
+  function loadStorage() {
+    try {
+      var raw = localStorage.getItem(CUR_KEY);
+      if (raw) doc = normalize(JSON.parse(raw));
+    } catch (e) { doc = blank(); }
+    try {
+      var list = JSON.parse(localStorage.getItem(LIB_KEY) || "[]");
+      library = Array.isArray(list) ? list.map(normalize) : [];
+    } catch (e2) { library = []; }
+  }
+
+  function fit(cssW, cssH, cam) {
+    var pad = 10;
+    var aw = Math.max(1, cssW - pad * 2);
+    var ah = Math.max(1, cssH - pad * 2);
+    var scale = Math.min(aw / cam.w, ah / cam.h);
+    var dw = cam.w * scale;
+    var dh = cam.h * scale;
+    return { scale: scale, ox: (cssW - dw) / 2, oy: (cssH - dh) / 2, cam: cam };
+  }
+  function worldFrom(px, py, t, flip) {
+    var feetX = (px - t.ox) / t.scale;
+    var feetY = (py - t.oy) / t.scale;
+    return {
+      x: flip ? (t.cam.x + t.cam.w - feetX) : (t.cam.x + feetX),
+      y: t.cam.y + feetY
+    };
+  }
+  function screenFrom(wx, wy, t, flip) {
+    var feetX = flip ? (t.cam.x + t.cam.w - wx) : (wx - t.cam.x);
+    return { x: t.ox + feetX * t.scale, y: t.oy + (wy - t.cam.y) * t.scale };
+  }
+  function currentFit() {
+    return fit(state.cssW, state.cssH, doc.camera);
+  }
+  function toWorld(local) {
+    return worldFrom(local.x, local.y, currentFit(), doc.flip);
+  }
+
+  function pieceById(id) {
+    for (var i = 0; i < doc.pieces.length; i++) if (doc.pieces[i].id === id) return doc.pieces[i];
+    return null;
+  }
+  function markById(id) {
+    for (var i = 0; i < doc.marks.length; i++) if (doc.marks[i].id === id) return doc.marks[i];
+    return null;
+  }
+  function pieceHitRadius(p) {
+    if (p.type === "skater") return (p.role === "G" ? 2.65 : 2.15) + (DEFENSE[p.role] ? 1.35 : 0.3);
+    if (p.type === "puck") return 1.5;
+    if (p.type === "cone" || p.type === "tire") return 2.4;
+    if (p.type === "net") return 4;
+    if (p.type === "text") return Math.max(2.4, ((p.text || "").length * 1.2) / 2 + 1.2);
+    return 2;
+  }
+  function distPointSeg(px, py, ax, ay, bx, by) {
+    var dx = bx - ax;
+    var dy = by - ay;
+    var len2 = dx * dx + dy * dy;
+    var t = len2 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    var x = ax + dx * t;
+    var y = ay + dy * t;
+    return Math.hypot(px - x, py - y);
+  }
+  function hitTest(world) {
+    var slop = 22 / currentFit().scale;
+    for (var i = doc.pieces.length - 1; i >= 0; i--) {
+      var p = doc.pieces[i];
+      if (Math.hypot(world.x - p.x, world.y - p.y) <= pieceHitRadius(p) + slop) return { kind: "piece", id: p.id };
+    }
+    var reach = 20 / currentFit().scale;
+    for (var m = doc.marks.length - 1; m >= 0; m--) {
+      var mark = doc.marks[m];
+      var pts = mark.points;
+      for (var s = 1; s < pts.length; s++) {
+        if (distPointSeg(world.x, world.y, pts[s - 1].x, pts[s - 1].y, pts[s].x, pts[s].y) <= reach) {
+          return { kind: "mark", id: mark.id };
+        }
+      }
+    }
+    return null;
+  }
+
+  function rinkPath(ctx) {
+    var L = RINK_L, W = RINK_W, R = 28;
+    ctx.beginPath();
+    ctx.moveTo(R, 0);
+    ctx.lineTo(L - R, 0);
+    ctx.arc(L - R, R, R, -Math.PI / 2, 0);
+    ctx.lineTo(L, W - R);
+    ctx.arc(L - R, W - R, R, 0, Math.PI / 2);
+    ctx.lineTo(R, W);
+    ctx.arc(R, W - R, R, Math.PI / 2, Math.PI);
+    ctx.lineTo(0, R);
+    ctx.arc(R, R, R, Math.PI, Math.PI * 1.5);
+    ctx.closePath();
+  }
+  function drawCrease(ctx, goalX, iceDir) {
+    ctx.beginPath();
+    if (iceDir > 0) ctx.arc(goalX, 42.5, 6, -Math.PI / 2, Math.PI / 2);
+    else ctx.arc(goalX, 42.5, 6, Math.PI / 2, -Math.PI / 2);
+    ctx.closePath();
+    ctx.fillStyle = "#d6e6f8";
+    ctx.fill();
+    ctx.strokeStyle = RED;
+    ctx.lineWidth = 0.16;
+    ctx.stroke();
+  }
+  function drawGoalFrame(ctx, goalX, intoEnd) {
+    var y = 42.5, half = 3, depth = 3.4;
+    var back = goalX + intoEnd * depth;
+    ctx.beginPath();
+    ctx.moveTo(goalX, y - half);
+    ctx.lineTo(back, y - half * 0.72);
+    ctx.lineTo(back, y + half * 0.72);
+    ctx.lineTo(goalX, y + half);
+    ctx.strokeStyle = RED;
+    ctx.lineWidth = 0.32;
+    ctx.stroke();
+  }
+  function drawDot(ctx, x, y) {
+    ctx.beginPath();
+    ctx.arc(x, y, 0.7, 0, Math.PI * 2);
+    ctx.fillStyle = RED;
+    ctx.fill();
+  }
+  function drawFaceoff(ctx, cx, cy) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, 15, 0, Math.PI * 2);
+    ctx.strokeStyle = RED;
+    ctx.lineWidth = 0.2;
+    ctx.stroke();
+    drawDot(ctx, cx, cy);
+    ctx.beginPath();
+    ctx.lineWidth = 0.16;
+    ctx.strokeStyle = RED;
+    for (var n = 0; n < 2; n++) {
+      var sign = n ? 1 : -1;
+      var x0 = cx + sign * 15;
+      var x1 = cx + sign * 19.5;
+      ctx.moveTo(x1, cy - 2.2);
+      ctx.lineTo(x1, cy + 2.2);
+      ctx.moveTo(x0, cy - 0.9);
+      ctx.lineTo(x1, cy - 0.9);
+      ctx.moveTo(x0, cy + 0.9);
+      ctx.lineTo(x1, cy + 0.9);
+    }
+    ctx.stroke();
+  }
+  function drawRink(ctx) {
+    ctx.save();
+    rinkPath(ctx);
+    ctx.fillStyle = ICE;
+    ctx.fill();
+    ctx.clip();
+    ctx.fillStyle = BLUE;
+    ctx.fillRect(74, 0, 2, RINK_W);
+    ctx.fillRect(124, 0, 2, RINK_W);
+    ctx.fillStyle = RED;
+    ctx.fillRect(99, 0, 2, RINK_W);
+    ctx.beginPath();
+    ctx.strokeStyle = RED;
+    ctx.lineWidth = 0.28;
+    ctx.moveTo(11, 0); ctx.lineTo(11, RINK_W);
+    ctx.moveTo(189, 0); ctx.lineTo(189, RINK_W);
+    ctx.stroke();
+    drawCrease(ctx, 11, 1);
+    drawCrease(ctx, 189, -1);
+    drawGoalFrame(ctx, 11, -1);
+    drawGoalFrame(ctx, 189, 1);
+    drawFaceoff(ctx, 31, 20.5);
+    drawFaceoff(ctx, 31, 64.5);
+    drawFaceoff(ctx, 169, 20.5);
+    drawFaceoff(ctx, 169, 64.5);
+    ctx.beginPath();
+    ctx.arc(100, 42.5, 15, 0, Math.PI * 2);
+    ctx.strokeStyle = RED;
+    ctx.lineWidth = 0.2;
+    ctx.stroke();
+    drawDot(ctx, 100, 42.5);
+    drawDot(ctx, 80, 20.5); drawDot(ctx, 80, 64.5);
+    drawDot(ctx, 120, 20.5); drawDot(ctx, 120, 64.5);
+    ctx.restore();
+    rinkPath(ctx);
+    ctx.strokeStyle = "#1b2430";
+    ctx.lineWidth = 0.75;
+    ctx.stroke();
+  }
+  function strokeSmooth(ctx, pts) {
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    if (pts.length === 2) {
+      ctx.lineTo(pts[1].x, pts[1].y);
+      ctx.stroke();
+      return;
+    }
+    for (var i = 1; i < pts.length - 1; i++) {
+      var mx = (pts[i].x + pts[i + 1].x) / 2;
+      var my = (pts[i].y + pts[i + 1].y) / 2;
+      ctx.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
+    }
+    ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+    ctx.stroke();
+  }
+  function drawArrowHead(ctx, x1, y1, x2, y2, size) {
+    var ang = Math.atan2(y2 - y1, x2 - x1);
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - size * Math.cos(ang - 0.42), y2 - size * Math.sin(ang - 0.42));
+    ctx.lineTo(x2 - size * Math.cos(ang + 0.42), y2 - size * Math.sin(ang + 0.42));
+    ctx.closePath();
+    ctx.fill();
+  }
+  function drawSine(ctx, x1, y1, x2, y2) {
+    var dx = x2 - x1, dy = y2 - y1;
+    var len = Math.hypot(dx, dy);
+    if (len < 1) return;
+    var ux = dx / len, uy = dy / len;
+    var px = -uy, py = ux;
+    var amp = 0.95, wave = 7;
+    var steps = Math.max(12, Math.ceil(len / 0.8));
+    ctx.beginPath();
+    for (var i = 0; i <= steps; i++) {
+      var t = (i / steps) * len;
+      var off = Math.sin((t / wave) * Math.PI * 2) * amp;
+      var x = x1 + ux * t + px * off;
+      var y = y1 + uy * t + py * off;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  function drawMark(ctx, m, widthBoost) {
+    if (!m.points || m.points.length < 2) return;
+    ctx.save();
+    ctx.strokeStyle = m.color;
+    ctx.fillStyle = m.color;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    var boost = widthBoost || 0;
+    if (m.type === "draw") {
+      ctx.lineWidth = 0.45 + boost;
+      strokeSmooth(ctx, m.points);
+      ctx.restore();
+      return;
+    }
+    var a = m.points[0];
+    var b = m.points[m.points.length - 1];
+    var heavy = m.type === "shot";
+    ctx.lineWidth = (heavy ? 0.82 : 0.36) + boost;
+    if (m.type === "pass" && !boost) ctx.setLineDash([1.35, 0.9]);
+    var dx = b.x - a.x, dy = b.y - a.y;
+    var len = Math.hypot(dx, dy) || 1;
+    var head = heavy ? 3.3 : 2.4;
+    var trim = Math.min(head * 0.62, len * 0.4);
+    var ex = b.x - (dx / len) * trim;
+    var ey = b.y - (dy / len) * trim;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (m.type === "carry") {
+      ctx.lineWidth = 0.3 + boost;
+      drawSine(ctx, a.x, a.y, ex, ey);
+    }
+    if (!boost) drawArrowHead(ctx, a.x, a.y, b.x, b.y, head);
+    ctx.restore();
+  }
+  function drawLabel(ctx, text, x, y, color, maxW) {
+    ctx.save();
+    ctx.translate(x, y);
+    if (doc.flip) ctx.scale(-1, 1);
+    ctx.fillStyle = color;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    var size = 1.8;
+    ctx.font = "700 " + size + "px system-ui, sans-serif";
+    while (text && ctx.measureText(text).width > maxW && size > 0.9) {
+      size -= 0.1;
+      ctx.font = "700 " + size + "px system-ui, sans-serif";
+    }
+    ctx.fillText(text || "", 0, 0.08);
+    ctx.restore();
+  }
+  function drawPiece(ctx, p) {
+    ctx.save();
+    if (p.type === "skater") {
+      var goalie = p.role === "G";
+      var defense = !!DEFENSE[p.role];
+      var r = goalie ? 2.65 : 2.15;
+      var fill = goalie ? GOALIE : (p.team === "them" ? "#fbfbfb" : NAVY);
+      var ink = goalie ? "#3e4750" : NAVY;
+      var text = goalie || p.team === "them" ? "#1b1e22" : "#fff";
+      if (!goalie && p.team !== "them") text = "#fff";
+      ctx.fillStyle = "rgba(20,30,40,0.18)";
+      ctx.beginPath();
+      ctx.ellipse(p.x + 0.28, p.y + 0.5, r * 0.8, r * 0.36, 0, 0, Math.PI * 2);
+      ctx.fill();
+      if (defense) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r + 1.15, 0, Math.PI * 2);
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = 0.42;
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.lineWidth = 0.18;
+      ctx.strokeStyle = ink;
+      ctx.stroke();
+      drawLabel(ctx, p.role || "", p.x, p.y, goalie ? "#1b1e22" : text, r * 1.7);
+      ctx.restore();
+      return;
+    }
+    if (p.type === "puck") {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 0.8, 0, Math.PI * 2);
+      ctx.fillStyle = "#161616";
+      ctx.fill();
+      ctx.lineWidth = 0.12;
+      ctx.strokeStyle = "#4a4a4a";
+      ctx.stroke();
+    } else if (p.type === "cone") {
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y - 1.8);
+      ctx.lineTo(p.x + 1.45, p.y + 1.25);
+      ctx.lineTo(p.x - 1.45, p.y + 1.25);
+      ctx.closePath();
+      ctx.fillStyle = "#f08a14";
+      ctx.fill();
+      ctx.strokeStyle = "#c46a08";
+      ctx.lineWidth = 0.14;
+      ctx.stroke();
+    } else if (p.type === "tire") {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 1.7, 0, Math.PI * 2);
+      ctx.strokeStyle = "#222";
+      ctx.lineWidth = 0.85;
+      ctx.stroke();
+    } else if (p.type === "net") {
+      var dir = p.x < 100 ? 1 : -1;
+      var half = 3, depth = 3.3;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y - half);
+      ctx.lineTo(p.x + dir * depth, p.y - half * 0.7);
+      ctx.lineTo(p.x + dir * depth, p.y + half * 0.7);
+      ctx.lineTo(p.x, p.y + half);
+      ctx.strokeStyle = RED;
+      ctx.lineWidth = 0.36;
+      ctx.stroke();
+    } else if (p.type === "text") {
+      var label = p.text || "Text";
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      if (doc.flip) ctx.scale(-1, 1);
+      ctx.font = "700 2.1px system-ui, sans-serif";
+      var w = Math.max(4.2, ctx.measureText(label).width + 1.4);
+      ctx.fillStyle = "#fff";
+      ctx.strokeStyle = NAVY;
+      ctx.lineWidth = 0.14;
+      roundRect(ctx, -w / 2, -1.55, w, 3.1, 0.6);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = NAVY;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, 0, 0.05);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  function drawSelection(ctx) {
+    var sel = state.selected;
+    if (!sel) return;
+    ctx.save();
+    ctx.strokeStyle = "#e2b340";
+    ctx.lineWidth = 0.28;
+    ctx.setLineDash([0.55, 0.4]);
+    if (sel.kind === "piece") {
+      var p = pieceById(sel.id);
+      if (p) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, pieceHitRadius(p) + 0.45, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+    if (sel.kind === "mark") {
+      var m = markById(sel.id);
+      if (m) drawMark(ctx, { type: m.type, color: "#e2b340", points: m.points }, 0.55);
+    }
+  }
+  function applyWorld(ctx, t, dpr) {
+    var s = t.scale * dpr;
+    var ox = t.ox * dpr;
+    var oy = t.oy * dpr;
+    if (!doc.flip) ctx.setTransform(s, 0, 0, s, ox - t.cam.x * s, oy - t.cam.y * s);
+    else ctx.setTransform(-s, 0, 0, s, ox + (t.cam.x + t.cam.w) * s, oy - t.cam.y * s);
+  }
+  function drawScene(ctx, cssW, cssH, dpr) {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+    ctx.fillStyle = "#243140";
+    ctx.fillRect(0, 0, cssW, cssH);
+    var t = fit(cssW, cssH, doc.camera);
+    applyWorld(ctx, t, dpr);
+    drawRink(ctx);
+    var sel = state.selected;
+    for (var i = 0; i < doc.marks.length; i++) {
+      var m = doc.marks[i];
+      if (sel && sel.kind === "mark" && sel.id === m.id) {
+        drawMark(ctx, { type: m.type, color: "#e2b340", points: m.points }, 0.7);
+      }
+      drawMark(ctx, m, 0);
+    }
+    if (state.preview) drawMark(ctx, state.preview, 0);
+    for (var p = 0; p < doc.pieces.length; p++) drawPiece(ctx, doc.pieces[p]);
+    if (sel && sel.kind === "piece") drawSelection(ctx);
+  }
+  function draw() {
+    if (!state.cssW || !state.cssH) return;
+    drawScene(ice.getContext("2d"), state.cssW, state.cssH, state.dpr);
+  }
+
+  function removeSelectedFromDoc(hit) {
+    if (!hit) return;
+    if (hit.kind === "piece") doc.pieces = doc.pieces.filter(function (p) { return p.id !== hit.id; });
+    else doc.marks = doc.marks.filter(function (m) { return m.id !== hit.id; });
+    if (state.selected && state.selected.id === hit.id) state.selected = null;
+  }
+  function deleteSelection() {
+    if (!state.selected || !findSelected()) {
+      toast("Select something first");
+      return;
+    }
+    disarmClear();
+    pushHistory();
+    removeSelectedFromDoc(state.selected);
+    persist();
+    draw();
+  }
+  function findSelected() {
+    if (!state.selected) return null;
+    return state.selected.kind === "piece" ? pieceById(state.selected.id) : markById(state.selected.id);
+  }
+  function eraseAt(world) {
+    var hit = hitTest(world);
+    if (!hit) return;
+    disarmClear();
+    pushHistory();
+    removeSelectedFromDoc(hit);
+    persist();
+    draw();
+  }
+  function clearIce() {
+    var btn = document.querySelector('[data-act="clear"]');
+    if (!clearArmed) {
+      clearArmed = true;
+      btn.textContent = "Sure?";
+      btn.classList.add("armed");
+      clearTimeout(clearTimer);
+      clearTimer = setTimeout(disarmClear, 3000);
+      return;
+    }
+    disarmClear();
+    pushHistory();
+    doc.pieces = [];
+    doc.marks = [];
+    state.selected = null;
+    persist();
+    draw();
+    toast("Ice cleared");
+  }
+  function disarmClear() {
+    clearArmed = false;
+    clearTimeout(clearTimer);
+    var btn = document.querySelector('[data-act="clear"]');
+    if (btn) {
+      btn.textContent = "Clear";
+      btn.classList.remove("armed");
+    }
+  }
+  function dropPiece(world) {
+    if (state.placeType === "text") {
+      textAt = world;
+      var form = document.getElementById("textbar");
+      form.classList.add("open");
+      var input = document.getElementById("textinput");
+      input.value = "";
+      input.focus();
+      return;
+    }
+    disarmClear();
+    pushHistory();
+    var piece = {
+      id: uid(),
+      type: state.placeType,
+      x: world.x,
+      y: world.y,
+      team: state.team,
+      role: state.placeRole,
+      text: ""
+    };
+    doc.pieces.push(piece);
+    state.selected = { kind: "piece", id: piece.id };
+    persist();
+    draw();
+  }
+  function placeText(text) {
+    document.getElementById("textbar").classList.remove("open");
+    if (!textAt || !text) { textAt = null; return; }
+    pushHistory();
+    var piece = { id: uid(), type: "text", x: textAt.x, y: textAt.y, team: null, role: null, text: text };
+    doc.pieces.push(piece);
+    state.selected = { kind: "piece", id: piece.id };
+    textAt = null;
+    persist();
+    draw();
+  }
+  function commitInk(origin, points) {
+    var type = state.tool;
+    var stored;
+    if (type === "draw") {
+      if (!points || points.length < 2) return;
+      stored = points.slice();
+    } else {
+      var end = points[points.length - 1];
+      if (Math.hypot(end.x - origin.x, end.y - origin.y) < 3) return;
+      stored = [origin, end];
+    }
+    disarmClear();
+    pushHistory();
+    var mark = { id: uid(), type: type, color: state.color, points: stored };
+    doc.marks.push(mark);
+    state.selected = { kind: "mark", id: mark.id };
+    persist();
+  }
+
+  function localPoint(e) {
+    var r = ice.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+  function screenDist(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+  function onDown(e) {
+    if (e.button != null && e.button !== 0) return;
+    ice.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, localPoint(e));
+    if (pointers.size >= 2) {
+      gesture = null;
+      state.preview = null;
+      pinch = beginPinch();
+      draw();
+      return;
+    }
+    if (lockout) return;
+    var local = localPoint(e);
+    var world = toWorld(local);
+    if (state.tool === "select") {
+      var hit = hitTest(world);
+      state.selected = hit;
+      gesture = { type: "drag", pointerId: e.pointerId, origin: world, local: local, hit: hit, moved: false, saved: false, start: startOf(hit) };
+      draw();
+      return;
+    }
+    if (state.tool === "erase") {
+      eraseAt(world);
+      return;
+    }
+    if (state.tool === "place") {
+      gesture = { type: "place", pointerId: e.pointerId, origin: world, local: local };
+      return;
+    }
+    if (MARKS[state.tool]) {
+      gesture = { type: "ink", pointerId: e.pointerId, origin: world, local: local, points: [world] };
+      state.preview = { type: state.tool, color: state.color, points: [world, world] };
+      draw();
+    }
+  }
+  function startOf(hit) {
+    if (!hit) return null;
+    if (hit.kind === "piece") {
+      var p = pieceById(hit.id);
+      return p ? { x: p.x, y: p.y } : null;
+    }
+    var m = markById(hit.id);
+    return m ? { points: m.points.map(function (pt) { return { x: pt.x, y: pt.y }; }) } : null;
+  }
+  function onMove(e) {
+    if (!pointers.has(e.pointerId)) return;
+    var events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+    var last = events.length ? events[events.length - 1] : e;
+    pointers.set(e.pointerId, localPoint(last));
+    if (pointers.size >= 2 || pinch) {
+      updatePinch();
+      return;
+    }
+    if (!gesture || gesture.pointerId !== e.pointerId) return;
+    if (gesture.type === "ink" && state.tool === "draw") {
+      for (var i = 0; i < events.length; i++) addDrawPoint(toWorld(localPoint(events[i])));
+      state.preview = { type: "draw", color: state.color, points: gesture.points.slice() };
+      draw();
+      return;
+    }
+    var world = toWorld(localPoint(last));
+    if (gesture.type === "drag") {
+      if (!gesture.hit || !gesture.start) return;
+      var movedPx = screenDist(gesture.local, localPoint(last));
+      if (!gesture.moved && movedPx < 6) return;
+      if (!gesture.saved) { pushHistory(); gesture.saved = true; }
+      gesture.moved = true;
+      var dx = world.x - gesture.origin.x;
+      var dy = world.y - gesture.origin.y;
+      if (gesture.hit.kind === "piece") {
+        var p = pieceById(gesture.hit.id);
+        if (p) { p.x = gesture.start.x + dx; p.y = gesture.start.y + dy; }
+      } else {
+        var m = markById(gesture.hit.id);
+        if (m) m.points = gesture.start.points.map(function (pt) { return { x: pt.x + dx, y: pt.y + dy }; });
+      }
+      draw();
+      return;
+    }
+    if (gesture.type === "ink") {
+      state.preview = { type: state.tool, color: state.color, points: [gesture.origin, world] };
+      draw();
+    }
+  }
+  function addDrawPoint(world) {
+    var pts = gesture.points;
+    var last = pts[pts.length - 1];
+    if (Math.hypot(world.x - last.x, world.y - last.y) >= 0.28) pts.push(world);
+  }
+  function onUp(e) {
+    pointers.delete(e.pointerId);
+    if (pinch && pointers.size < 2) {
+      pinch = null;
+      if (pointers.size) lockout = true;
+      return;
+    }
+    if (lockout) {
+      if (!pointers.size) lockout = false;
+      gesture = null;
+      state.preview = null;
+      return;
+    }
+    if (!gesture || gesture.pointerId !== e.pointerId) return;
+    var world = toWorld(localPoint(e));
+    if (gesture.type === "place") {
+      if (screenDist(gesture.local, localPoint(e)) < 12) dropPiece(world);
+    } else if (gesture.type === "ink") {
+      if (state.tool === "draw") commitInk(gesture.origin, gesture.points);
+      else commitInk(gesture.origin, [gesture.origin, world]);
+      state.preview = null;
+    } else if (gesture.saved) {
+      persist();
+    }
+    gesture = null;
+    draw();
+  }
+  function beginPinch() {
+    var pts = Array.from(pointers.values());
+    if (pts.length < 2) return null;
+    return { dist: Math.max(1, screenDist(pts[0], pts[1])), mid: mid(pts[0], pts[1]), cam: clone(doc.camera) };
+  }
+  function mid(a, b) { return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; }
+  function updatePinch() {
+    if (!pinch) pinch = beginPinch();
+    if (!pinch) return;
+    var pts = Array.from(pointers.values());
+    if (pts.length < 2) return;
+    var dist = Math.max(1, screenDist(pts[0], pts[1]));
+    var now = mid(pts[0], pts[1]);
+    var k = pinch.dist / dist;
+    var minW = 20, maxW = 230;
+    var w = Math.min(maxW, Math.max(minW, pinch.cam.w * k));
+    k = w / pinch.cam.w;
+    var h = pinch.cam.h * k;
+    var startFit = fit(state.cssW, state.cssH, pinch.cam);
+    var anchor = worldFrom(pinch.mid.x, pinch.mid.y, startFit, doc.flip);
+    doc.camera = { x: 0, y: 0, w: w, h: h };
+    var nextFit = fit(state.cssW, state.cssH, doc.camera);
+    var feetX = (now.x - nextFit.ox) / nextFit.scale;
+    var feetY = (now.y - nextFit.oy) / nextFit.scale;
+    if (doc.flip) doc.camera.x = anchor.x - (w - feetX);
+    else doc.camera.x = anchor.x - feetX;
+    doc.camera.y = anchor.y - feetY;
+    if (doc.camera.x > RINK_L - 6) doc.camera.x = RINK_L - 6;
+    if (doc.camera.x + doc.camera.w < 6) doc.camera.x = 6 - doc.camera.w;
+    if (doc.camera.y > RINK_W - 6) doc.camera.y = RINK_W - 6;
+    if (doc.camera.y + doc.camera.h < 6) doc.camera.y = 6 - doc.camera.h;
+    draw();
+  }
+
+  function setView(view) {
+    disarmClear();
+    doc.view = view;
+    doc.camera = homeCamera(view, doc.flip);
+    persist();
+    syncPressed();
+    draw();
+  }
+  function toggleFlip() {
+    disarmClear();
+    doc.flip = !doc.flip;
+    doc.camera = homeCamera(doc.view, doc.flip);
+    persist();
+    syncPressed();
+    draw();
+  }
+  function setTool(tool) {
+    disarmClear();
+    state.tool = tool;
+    state.placeType = null;
+    state.placeRole = null;
+    syncPressed();
+  }
+  function setPlace(type, role) {
+    disarmClear();
+    state.tool = "place";
+    state.placeType = type;
+    state.placeRole = role || null;
+    syncPressed();
+  }
+  function saveDrill() {
+    var copy = clone(doc);
+    var idx = -1;
+    for (var i = 0; i < library.length; i++) if (library[i].id === doc.id) idx = i;
+    if (idx >= 0) library[idx] = copy;
+    else library.unshift(copy);
+    persist();
+    persistLibrary();
+    toast("Saved");
+  }
+  function rememberCurrent() {
+    if (!doc.pieces.length && !doc.marks.length && !doc.notes) return;
+    saveDrill();
+  }
+  function newDrill() {
+    rememberCurrent();
+    doc = blank();
+    state.selected = null;
+    resetHistory();
+    syncForm();
+    persist();
+    draw();
+    closeSheets();
+    toast("New drill");
+  }
+  function duplicateDrill() {
+    rememberCurrent();
+    var copy = clone(doc);
+    copy.id = uid();
+    copy.name = (doc.name || "Drill") + " copy";
+    doc = copy;
+    library.unshift(clone(doc));
+    state.selected = null;
+    resetHistory();
+    syncForm();
+    persist();
+    persistLibrary();
+    draw();
+    toast("Duplicated");
+  }
+  function deleteDrill() {
+    var next = [];
+    for (var i = 0; i < library.length; i++) if (library[i].id !== doc.id) next.push(library[i]);
+    library = next;
+    persistLibrary();
+    renderDrills();
+    toast("Removed from saved drills");
+  }
+  function clearList() {
+    var btn = document.getElementById("clear-list");
+    if (!listArmed) {
+      listArmed = true;
+      btn.textContent = "Sure?";
+      clearTimeout(listTimer);
+      listTimer = setTimeout(function () {
+        listArmed = false;
+        btn.textContent = "Clear list";
+      }, 3000);
+      return;
+    }
+    listArmed = false;
+    btn.textContent = "Clear list";
+    library = [];
+    persistLibrary();
+    renderDrills();
+    toast("Saved drills cleared");
+  }
+  function loadDrill(id) {
+    var found = null;
+    for (var i = 0; i < library.length; i++) if (library[i].id === id) found = library[i];
+    if (!found) return;
+    doc = normalize(clone(found));
+    state.selected = null;
+    resetHistory();
+    syncForm();
+    persist();
+    draw();
+  }
+  function exportPayload() {
+    return { version: 1, current: doc, drills: library };
+  }
+  function importData(data) {
+    if (!data || data.version !== 1) throw new Error("bad");
+    if (Array.isArray(data.drills)) library = data.drills.map(normalize);
+    else library = [];
+    if (data.current) doc = normalize(data.current);
+    else if (library.length) doc = normalize(clone(library[0]));
+    else doc = blank();
+    state.selected = null;
+    resetHistory();
+    syncForm();
+    persist();
+    persistLibrary();
+    draw();
+  }
+  function download(filename, blob) {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1500);
+  }
+  function slug(name) {
+    var s = String(name || "drill").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    return s || "drill";
+  }
+  function exportJson() {
+    download(slug(doc.name) + ".json", new Blob([JSON.stringify(exportPayload(), null, 2)], { type: "application/json" }));
+  }
+  function exportPng() {
+    var cam = doc.camera;
+    var longSide = 1600;
+    var aspect = cam.w / cam.h;
+    var w, h;
+    if (aspect >= 1) { w = longSide; h = Math.max(1, Math.round(longSide / aspect)); }
+    else { h = longSide; w = Math.max(1, Math.round(longSide * aspect)); }
+    var canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    drawScene(canvas.getContext("2d"), w, h, 1);
+    canvas.toBlob(function (blob) {
+      if (!blob) { toast("Could not export the image"); return; }
+      download(slug(doc.name) + ".png", blob);
+    });
+  }
+
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove("show"); }, 1600);
+  }
+  function syncHistoryButtons() {
+    document.querySelector('[data-act="undo"]').disabled = !undoStack.length;
+    document.querySelector('[data-act="redo"]').disabled = !redoStack.length;
+  }
+  function syncChips() {
+    var nodes = document.querySelectorAll("[data-set]");
+    for (var i = 0; i < nodes.length; i++) nodes[i].hidden = nodes[i].dataset.set !== doc.labelSet;
+  }
+  function syncPressed() {
+    var buttons = document.querySelectorAll("#bar button");
+    for (var i = 0; i < buttons.length; i++) {
+      var b = buttons[i];
+      var on = false;
+      if (b.dataset.view) on = b.dataset.view === doc.view;
+      else if (b.dataset.tool) on = state.tool === b.dataset.tool;
+      else if (b.dataset.act === "place") on = state.tool === "place" && state.placeType === b.dataset.type && (state.placeRole || "") === (b.dataset.role || "");
+      else if (b.dataset.act === "color") on = state.color === b.dataset.color;
+      else if (b.dataset.act === "flip") on = !!doc.flip;
+      b.classList.toggle("active", on);
+    }
+    var teamBtn = document.getElementById("team-btn");
+    teamBtn.textContent = state.team === "us" ? "Us" : "Them";
+    teamBtn.classList.toggle("team-them", state.team === "them");
+    var labelBtn = document.getElementById("label-btn");
+    labelBtn.textContent = doc.labelSet === "positions" ? "Pos" : "Unit";
+    labelBtn.setAttribute("aria-label", doc.labelSet === "positions" ? "Positions. Switch to D1 D2 F1 F2 F3" : "Units. Switch to LD RD LW C RW");
+    syncChips();
+  }
+  function syncForm() {
+    nameInput.value = doc.name;
+    notesInput.value = doc.notes;
+    syncPressed();
+    syncHistoryButtons();
+  }
+  function renderDrills() {
+    var list = document.getElementById("drill-list");
+    list.innerHTML = "";
+    if (!library.length) {
+      var li = document.createElement("li");
+      li.className = "empty";
+      li.textContent = "No saved drills yet. Hit Save.";
+      list.appendChild(li);
+      return;
+    }
+    for (var i = 0; i < library.length; i++) {
+      (function (drill) {
+        var item = document.createElement("li");
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = drill.name || "Untitled";
+        if (drill.id === doc.id) btn.classList.add("current");
+        btn.addEventListener("click", function () {
+          loadDrill(drill.id);
+          closeSheets();
+        });
+        item.appendChild(btn);
+        list.appendChild(item);
+      })(library[i]);
+    }
+  }
+  function closeSheets() {
+    document.getElementById("sheet").classList.remove("open");
+    document.getElementById("notesheet").classList.remove("open");
+  }
+  function requestLandscape() {
+    var shortSide = Math.min(screen.width, screen.height);
+    if (shortSide > 700) return;
+    try {
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock("landscape").catch(function () {});
+      }
+    } catch (e) { /* iPhone Chrome often rejects the lock. The rotate gate covers that. */ }
+  }
+
+  document.getElementById("bar").addEventListener("click", function (e) {
+    var btn = e.target.closest("button");
+    if (!btn || btn.disabled) return;
+    var act = btn.dataset.act;
+    if (act === "view") setView(btn.dataset.view);
+    else if (act === "flip") toggleFlip();
+    else if (act === "tool") setTool(btn.dataset.tool);
+    else if (act === "delete") deleteSelection();
+    else if (act === "clear") clearIce();
+    else if (act === "undo") undo();
+    else if (act === "redo") redo();
+    else if (act === "team") { state.team = state.team === "us" ? "them" : "us"; syncPressed(); }
+    else if (act === "labels") {
+      doc.labelSet = doc.labelSet === "positions" ? "units" : "positions";
+      state.placeRole = null;
+      state.placeType = null;
+      if (state.tool === "place") state.tool = "select";
+      persist();
+      syncPressed();
+    }
+    else if (act === "place") setPlace(btn.dataset.type, btn.dataset.role);
+    else if (act === "color") { state.color = btn.dataset.color; syncPressed(); }
+    else if (act === "notes") document.getElementById("notesheet").classList.toggle("open");
+    else if (act === "save") saveDrill();
+    else if (act === "drills") { renderDrills(); document.getElementById("sheet").classList.add("open"); }
+    else if (act === "png") exportPng();
+    else if (act === "export") exportJson();
+    else if (act === "import") document.getElementById("import-file").click();
+  });
+  document.getElementById("stage").addEventListener("click", function (e) {
+    var btn = e.target.closest("button");
+    if (!btn) return;
+    if (btn.dataset.act === "close-notes") document.getElementById("notesheet").classList.remove("open");
+    if (btn.dataset.act === "close-drills") closeSheets();
+    if (btn.dataset.act === "new") newDrill();
+    if (btn.dataset.act === "duplicate") duplicateDrill();
+    if (btn.dataset.act === "delete-drill") deleteDrill();
+    if (btn.dataset.act === "clear-list") clearList();
+  });
+  nameInput.addEventListener("input", function () {
+    doc.name = nameInput.value;
+    persist();
+  });
+  notesInput.addEventListener("input", function () {
+    if (!noteBurst) { pushHistory(); noteBurst = true; }
+    doc.notes = notesInput.value;
+    persist();
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(function () { noteBurst = false; }, 500);
+  });
+  document.getElementById("textbar").addEventListener("submit", function (e) {
+    e.preventDefault();
+    placeText(document.getElementById("textinput").value.trim());
+  });
+  document.getElementById("textcancel").addEventListener("click", function () {
+    textAt = null;
+    document.getElementById("textbar").classList.remove("open");
+  });
+  document.getElementById("import-file").addEventListener("change", function (e) {
+    var file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        importData(JSON.parse(String(reader.result)));
+        toast("Imported");
+      } catch (err) {
+        toast("That file is not a Rink Board export");
+      }
+    };
+    reader.readAsText(file);
+  });
+  document.addEventListener("keydown", function (e) {
+    var tag = document.activeElement && document.activeElement.tagName;
+    var typing = tag === "INPUT" || tag === "TEXTAREA";
+    if ((e.key === "Delete" || e.key === "Backspace") && !typing) {
+      if (state.selected) { e.preventDefault(); deleteSelection(); }
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !typing) {
+      e.preventDefault();
+      if (e.shiftKey) redo(); else undo();
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y" && !typing) {
+      e.preventDefault();
+      redo();
+    }
+  });
+  ice.addEventListener("pointerdown", onDown);
+  ice.addEventListener("pointermove", onMove);
+  ice.addEventListener("pointerup", onUp);
+  ice.addEventListener("pointercancel", onUp);
+  ice.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  ice.addEventListener("pointerdown", requestLandscape);
+
+  function resize() {
+    var rect = stage.getBoundingClientRect();
+    state.cssW = Math.max(1, rect.width);
+    state.cssH = Math.max(1, rect.height);
+    state.dpr = Math.min(2.5, window.devicePixelRatio || 1);
+    ice.width = Math.max(1, Math.round(state.cssW * state.dpr));
+    ice.height = Math.max(1, Math.round(state.cssH * state.dpr));
+    draw();
+  }
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
+  window.addEventListener("resize", resize);
+  window.addEventListener("orientationchange", resize);
+
+  function seedDemo() {
+    doc = blank();
+    doc.name = "Half ice";
+    doc.view = params.get("view") || "half";
+    if (!VIEWS[doc.view]) doc.view = "half";
+    doc.flip = params.get("flip") === "1";
+    doc.camera = homeCamera(doc.view, doc.flip);
+    doc.notes = "Whistle every 9–10 min";
+    doc.pieces = [
+      { id: "g", type: "skater", x: 15, y: 42.5, team: "us", role: "G" },
+      { id: "ld", type: "skater", x: 28, y: 24, team: "us", role: "LD" },
+      { id: "rw", type: "skater", x: 50, y: 36, team: "us", role: "RW" },
+      { id: "d1", type: "skater", x: 34, y: 62, team: "them", role: "D1" },
+      { id: "f2", type: "skater", x: 56, y: 62, team: "them", role: "F2" },
+      { id: "og", type: "skater", x: 70, y: 18, team: "them", role: "G" },
+      { id: "cone", type: "cone", x: 62, y: 30 },
+      { id: "puck", type: "puck", x: 44, y: 46 }
+    ];
+    doc.marks = [
+      { id: "sk", type: "skate", color: "#1a1a1a", points: [{ x: 28, y: 24 }, { x: 46, y: 18 }] },
+      { id: "ca", type: "carry", color: "#1f4fd8", points: [{ x: 22, y: 50 }, { x: 64, y: 42 }] },
+      { id: "pa", type: "pass", color: "#c8102e", points: [{ x: 50, y: 36 }, { x: 72, y: 24 }] },
+      { id: "sh", type: "shot", color: "#1e8a3a", points: [{ x: 58, y: 40 }, { x: 20, y: 42.5 }] }
+    ];
+  }
+
+  function isIcePixel(data) {
+    return data[3] > 0 && data[0] > 230 && data[1] > 230 && data[2] > 230;
+  }
+  function sample(ctx, x, y) {
+    var ix = Math.round(x), iy = Math.round(y);
+    if (ix < 0 || iy < 0 || ix >= ctx.canvas.width || iy >= ctx.canvas.height) return null;
+    return ctx.getImageData(ix, iy, 1, 1).data;
+  }
+  function runSelfTest() {
+    var lines = [];
+    function check(name, cond, extra) {
+      lines.push((cond ? "PASS " : "FAIL ") + name + (cond || !extra ? "" : " " + extra));
+    }
+    check("half", homeCamera("half", false).w === 100 && homeCamera("half", false).x === 0);
+    check("zone", homeCamera("zone", false).w === 75 && homeCamera("zone", false).x === 0);
+    check("three", homeCamera("three", false).w === 125);
+    var neu = homeCamera("neutral", false);
+    check("neutral", neu.x === 46 && neu.x + neu.w === 154);
+    check("half flip", homeCamera("half", true).x === 100 && homeCamera("half", true).w === 100);
+    check("zone flip", homeCamera("zone", true).x === 125 && homeCamera("zone", true).w === 75);
+    check("three flip", homeCamera("three", true).x === 75 && homeCamera("three", true).w === 125);
+    var t = fit(800, 680, homeCamera("half", false));
+    var back = worldFrom(screenFrom(11, 42.5, t, false).x, screenFrom(11, 42.5, t, false).y, t, false);
+    check("roundtrip", Math.abs(back.x - 11) < 0.01 && Math.abs(back.y - 42.5) < 0.01);
+    var left = screenFrom(0, 42.5, t, false);
+    check("near boards left", Math.abs(left.x - t.ox) < 0.5);
+    doc.flip = true;
+    var tf = fit(800, 680, homeCamera("half", true));
+    var farLeft = screenFrom(200, 42.5, tf, true);
+    check("flipped boards left", Math.abs(farLeft.x - tf.ox) < 0.5);
+    doc.flip = false;
+
+    var prevCur = null, prevLib = null;
+    try { prevCur = localStorage.getItem(CUR_KEY); prevLib = localStorage.getItem(LIB_KEY); } catch (e) {}
+    var savedPersist = persistOn;
+    persistOn = true;
+    doc = blank();
+    doc.name = "Test drill";
+    doc.notes = "keep";
+    doc.pieces = [{ id: "p1", type: "puck", x: 10, y: 10 }];
+    pushHistory();
+    doc.pieces.push({ id: "p2", type: "cone", x: 40, y: 40 });
+    undo();
+    check("undo", doc.pieces.length === 1 && doc.pieces[0].id === "p1");
+    redo();
+    check("redo", doc.pieces.length === 2);
+    state.cssW = 800; state.cssH = 680; state.dpr = 1;
+    doc.camera = homeCamera("half", false);
+    eraseAt({ x: 10, y: 10 });
+    check("erase", doc.pieces.length === 1 && doc.pieces[0].id === "p2");
+    state.selected = { kind: "piece", id: "p2" };
+    deleteSelection();
+    check("delete selection", doc.pieces.length === 0);
+    doc.pieces = [{ id: "z", type: "puck", x: 5, y: 5 }];
+    doc.marks = [{ id: "m", type: "skate", color: "#000", points: [{ x: 1, y: 1 }, { x: 8, y: 1 }] }];
+    clearIce();
+    clearIce();
+    check("clear", doc.pieces.length === 0 && doc.marks.length === 0);
+    undo();
+    check("undo clear", doc.pieces.length === 1 && doc.marks.length === 1);
+    var payload = exportPayload();
+    library = [];
+    doc = blank();
+    importData(payload);
+    check("import", doc.name === "Test drill" && doc.notes === "keep");
+    try {
+      if (prevCur == null) localStorage.removeItem(CUR_KEY); else localStorage.setItem(CUR_KEY, prevCur);
+      if (prevLib == null) localStorage.removeItem(LIB_KEY); else localStorage.setItem(LIB_KEY, prevLib);
+    } catch (e2) {}
+    persistOn = savedPersist;
+
+    doc.flip = false;
+    doc.camera = { x: 0, y: 0, w: 100, h: 85 };
+    doc.marks = [];
+    doc.pieces = [
+      { id: "ld", type: "skater", x: 30, y: 42, team: "us", role: "LD" },
+      { id: "rw", type: "skater", x: 58, y: 42, team: "us", role: "RW" },
+      { id: "g", type: "skater", x: 18, y: 28, team: "us", role: "G" },
+      { id: "gt", type: "skater", x: 18, y: 58, team: "them", role: "G" }
+    ];
+    doc.marks = [{ id: "c", type: "carry", color: "#1a1a1a", points: [{ x: 50, y: 42 }, { x: 70, y: 42 }] }];
+    state.selected = null;
+    state.preview = null;
+    var c = document.createElement("canvas");
+    c.width = 900; c.height = 700;
+    var ctx = c.getContext("2d", { willReadFrequently: true });
+    drawScene(ctx, 900, 700, 1);
+    var ft = fit(900, 700, doc.camera);
+    function at(wx, wy) { var s = screenFrom(wx, wy, ft, false); return sample(ctx, s.x, s.y); }
+    function rgb(px) { return px ? [px[0], px[1], px[2]].join(",") : "none"; }
+    var ldFill = at(30, 43.4);
+    var ldRing = at(30, 42 - 3.3);
+    var ldGap = at(30, 42 - 2.65);
+    var rwOuter = at(58, 42 - 3.3);
+    var gFill = at(18, 29.6);
+    var gtFill = at(18, 59.6);
+    check("LD fill", ldFill && ldFill[2] > ldFill[0] + 20 && ldFill[0] < 80, rgb(ldFill));
+    check("LD ring", ldRing && ldRing[2] > ldRing[0] + 20 && ldRing[0] < 90, rgb(ldRing));
+    check("LD gap", ldGap && isIcePixel(ldGap), rgb(ldGap));
+    check("RW no ring", rwOuter && isIcePixel(rwOuter), rgb(rwOuter));
+    check("goalie gray", gFill && gFill[0] > 140 && gFill[0] < 210 && Math.abs(gFill[0] - gFill[2]) < 40, rgb(gFill));
+    check("their goalie gray", gtFill && gtFill[0] > 140 && gtFill[0] < 210, rgb(gtFill));
+    var wave = at(51.75, 42.95);
+    var shaft = at(60, 42);
+    check("carry wave", wave && !isIcePixel(wave), rgb(wave));
+    check("carry shaft", shaft && !isIcePixel(shaft), rgb(shaft));
+
+    var failed = lines.some(function (line) { return line.indexOf("FAIL") === 0; });
+    var passed = lines.filter(function (line) { return line.indexOf("PASS") === 0; }).length;
+    document.getElementById("app").style.display = "none";
+    document.getElementById("gate").style.display = "none";
+    document.body.style.overflow = "auto";
+    document.body.style.background = failed ? "#ffd0d0" : "#d9ffd9";
+    var pre = document.createElement("pre");
+    pre.id = "selftest-result";
+    pre.textContent = (failed ? "FAIL" : "PASS") + " " + passed + "/" + lines.length + "\n" + lines.join("\n");
+    pre.style.margin = "0";
+    pre.style.color = "#111";
+    pre.style.font = "18px/1.35 ui-monospace, monospace";
+    pre.style.padding = "12px";
+    document.body.appendChild(pre);
+    document.title = failed ? "FAIL" : "PASS";
+  }
+
+  loadStorage();
+  if (params.has("demo")) seedDemo();
+  syncForm();
+  resize();
+  requestLandscape();
+  if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
+    navigator.serviceWorker.register("sw.js").catch(function () {});
+  }
+  if (params.has("selftest")) {
+    try { runSelfTest(); }
+    catch (err) {
+      document.title = "FAIL";
+      var pre = document.createElement("pre");
+      pre.id = "selftest-result";
+      pre.textContent = "FAIL\n" + (err && err.stack ? err.stack : err);
+      pre.style.cssText = "position:fixed;inset:0;z-index:80;margin:0;background:#ffd0d0;color:#111;font:20px/1.4 ui-monospace,monospace;padding:16px";
+      document.body.appendChild(pre);
+    }
+  }
+})();
+</script>
+</body>
+</html>
