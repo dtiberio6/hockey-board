@@ -78,6 +78,48 @@
   #dock button.team.active { box-shadow: inset 0 0 0 3px #e2b340; }
   #dock button.swatch { box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); min-width: 44px; }
   #dock button.swatch.active { box-shadow: inset 0 0 0 3px #fff; }
+  #dock button.piece { background: #1b3044; }
+  #dock button.action { background: #2c2440; }
+  #dock button.edit { background: #1c3330; }
+  #dock button.labelset { background: #3a3424; }
+  #draw-btn.active { box-shadow: inset 0 0 0 3px #fff; }
+  #tools .glabel {
+    flex: none;
+    display: flex;
+    align-items: center;
+    height: 44px;
+    margin-left: 8px;
+    padding: 0 6px;
+    border-left: 2px solid #3d4d62;
+    color: #9aafc4;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  #tools .glabel.teams { color: #f0c14a; border-left-color: #f0c14a; }
+  #tools .glabel.labels { color: #e2c56a; border-left-color: #e2c56a; }
+  #tools .glabel.pieces { color: #7eb6e0; border-left-color: #7eb6e0; }
+  #tools .glabel.actions { color: #c9a6e8; border-left-color: #c9a6e8; }
+  #tools .glabel.draw { color: #f0a070; border-left-color: #f0a070; }
+  #tools .glabel.edit { color: #8dcec0; border-left-color: #8dcec0; }
+  #tools .palette {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 44px;
+    padding: 0 2px;
+  }
+  #tools .palette .swatch {
+    flex: 1;
+    width: 22px;
+    min-width: 0;
+    height: 22px;
+    padding: 0;
+    border-radius: 5px;
+  }
+  #tools .palette .swatch.active { box-shadow: inset 0 0 0 2px #fff; }
   @media (orientation: landscape) and (min-height: 521px), (hover: hover) and (pointer: fine) and (min-width: 900px) {
     #app { flex-direction: row; }
     #dock {
@@ -101,6 +143,13 @@
       touch-action: pan-y;
     }
     #name, #view, .span2 { grid-column: 1 / -1; width: 100%; }
+    #bar { grid-auto-rows: 46px; }
+    #tools { grid-auto-rows: min-content; gap: 3px; }
+    #tools > button { min-height: 42px; height: 42px; }
+    #tools .glabel, #tools .palette, #tools .span2 { grid-column: 1 / -1; width: auto; margin-left: 0; border-left: 0; }
+    #tools .glabel { height: 16px; align-items: flex-end; padding: 0 2px; border-top: 1px solid #2c3a4c; }
+    #tools .glabel:first-child { border-top: 0; }
+    #tools .palette { height: 26px; }
     #dock button { width: 100%; min-width: 0; height: 46px; padding: 0 2px; }
   }
   @media (orientation: landscape) and (max-height: 520px) {
@@ -113,15 +162,18 @@
     #tools {
       grid-column: 1;
       grid-row: 1;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-auto-rows: 44px;
-      align-content: start;
+      display: flex;
+      flex-flow: row wrap;
+      align-content: flex-start;
+      align-items: flex-start;
+      gap: 3px;
       width: auto;
       height: auto;
       min-height: 0;
+      padding: 4px;
       overflow-x: hidden;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
       touch-action: pan-y;
     }
     #stage { grid-column: 2; grid-row: 1; }
@@ -139,7 +191,46 @@
     #name, #view, .span2 { grid-column: auto; width: auto; }
     #name { width: 96px; }
     #dock button { width: auto; min-width: 44px; height: 44px; padding: 0 8px; }
-    #tools button { width: 100%; min-width: 0; padding: 0 2px; }
+    #tools > button {
+      flex: 0 0 calc((100% - 3px) / 2);
+      width: calc((100% - 3px) / 2);
+      min-width: 0;
+      max-height: 40px;
+      min-height: 40px;
+      height: 40px;
+      padding: 0 2px;
+    }
+    #tools > .span2,
+    #tools > .glabel,
+    #tools > .palette {
+      flex: 0 0 100%;
+      width: 100%;
+      max-width: 100%;
+      margin-left: 0;
+      border-left: 0;
+    }
+    #tools .glabel {
+      height: 16px;
+      min-height: 16px;
+      max-height: 16px;
+      align-items: flex-end;
+      padding: 0 2px;
+      border-top: 1px solid #2c3a4c;
+    }
+    #tools .glabel:first-child { border-top: 0; }
+    #tools .palette {
+      height: 26px;
+      min-height: 26px;
+      max-height: 26px;
+      justify-content: flex-start;
+      gap: 4px;
+    }
+    #tools .palette .swatch {
+      flex: 0 0 18px;
+      width: 18px;
+      min-width: 18px;
+      height: 18px;
+    }
   }
   #gate {
     display: none;
@@ -280,40 +371,53 @@
   <div id="app">
     <div id="dock">
     <div id="tools">
+      <div class="glabel teams">Teams</div>
       <button type="button" class="team" data-act="team" data-team="home" id="home-btn">Home</button>
       <button type="button" class="team" data-act="team" data-team="away" id="away-btn">Away</button>
-      <button type="button" data-act="labels" id="label-btn" aria-label="Toggle position labels">Pos</button>
-      <button type="button" data-act="place" data-type="skater" data-role="G" data-set="positions">G</button>
-      <button type="button" data-act="place" data-type="skater" data-role="LD" data-set="positions">LD</button>
-      <button type="button" data-act="place" data-type="skater" data-role="RD" data-set="positions">RD</button>
-      <button type="button" data-act="place" data-type="skater" data-role="LW" data-set="positions">LW</button>
-      <button type="button" data-act="place" data-type="skater" data-role="C" data-set="positions">C</button>
-      <button type="button" data-act="place" data-type="skater" data-role="RW" data-set="positions">RW</button>
-      <button type="button" data-act="place" data-type="skater" data-role="G" data-set="units">G</button>
-      <button type="button" data-act="place" data-type="skater" data-role="D1" data-set="units">D1</button>
-      <button type="button" data-act="place" data-type="skater" data-role="D2" data-set="units">D2</button>
-      <button type="button" data-act="place" data-type="skater" data-role="F1" data-set="units">F1</button>
-      <button type="button" data-act="place" data-type="skater" data-role="F2" data-set="units">F2</button>
-      <button type="button" data-act="place" data-type="skater" data-role="F3" data-set="units">F3</button>
-      <button type="button" data-act="place" data-type="skater" data-role="X" data-set="xo">X</button>
-      <button type="button" data-act="place" data-type="skater" data-role="O" data-set="xo">O</button>
-      <button type="button" data-act="place" data-type="puck">Puck</button>
-      <button type="button" data-act="place" data-type="pile" aria-label="Pile of pucks">Pile</button>
-      <button type="button" data-act="place" data-type="cone">Cone</button>
-      <button type="button" data-act="place" data-type="net">Net</button>
-      <button type="button" data-act="place" data-type="tire">Tire</button>
-      <button type="button" data-act="place" data-type="text">Text</button>
-      <button type="button" data-act="tool" data-tool="skate">Skate</button>
-      <button type="button" data-act="tool" data-tool="carry" aria-label="Skate with puck">Carry</button>
-      <button type="button" data-act="tool" data-tool="back" aria-label="Backwards skate">Back</button>
-      <button type="button" data-act="tool" data-tool="pass">Pass</button>
-      <button type="button" data-act="tool" data-tool="shot">Shot</button>
-      <button type="button" data-act="tool" data-tool="draw">Draw</button>
-      <button type="button" class="swatch" data-act="color" data-color="#1a1a1a" style="background:#1a1a1a" aria-label="Black"></button>
-      <button type="button" class="swatch" data-act="color" data-color="#c8102e" style="background:#c8102e" aria-label="Red"></button>
-      <button type="button" class="swatch" data-act="color" data-color="#1f4fd8" style="background:#1f4fd8" aria-label="Blue"></button>
-      <button type="button" class="swatch" data-act="color" data-color="#1e8a3a" style="background:#1e8a3a" aria-label="Green"></button>
-      <button type="button" class="swatch" data-act="color" data-color="#ef8a14" style="background:#ef8a14" aria-label="Orange"></button>
+      <div class="glabel labels">Labels</div>
+      <button type="button" class="labelset span2" data-act="labels" id="label-btn" aria-label="Toggle position labels">Pos</button>
+      <div class="glabel pieces">Pieces</div>
+      <button type="button" class="piece" data-act="place" data-type="skater" data-role="G" data-set="positions">G</button>
+      <button type="button" class="piece" data-act="place" data-type="skater" data-role="LD" data-set="positions">LD</button>
+      <button type="button" class="piece" data-act="place" data-type="skater" data-role="RD" data-set="positions">RD</button>
+      <button type="button" class="piece" data-act="place" data-type="skater" data-role="LW" data-set="positions">LW</button>
+      <button type="button" class="piece" data-act="place" data-type="skater" data-role="C" data-set="positions">C</button>
+      <button type="button" class="piece" data-act="place" data-type="skater" data-role="RW" data-set="positions">RW</button>
+      <button type="button" class="piece" data-act="place" data-type="skater" data-role="G" data-set="units">G</button>
+      <button type="button" class="piece" data-act="place" data-type="skater" data-role="D1" data-set="units">D1</button>
+      <button type="button" class="piece" data-act="place" data-type="skater" data-role="D2" data-set="units">D2</button>
+      <button type="button" class="piece" data-act="place" data-type="skater" data-role="F1" data-set="units">F1</button>
+      <button type="button" class="piece" data-act="place" data-type="skater" data-role="F2" data-set="units">F2</button>
+      <button type="button" class="piece" data-act="place" data-type="skater" data-role="F3" data-set="units">F3</button>
+      <button type="button" class="piece" data-act="place" data-type="skater" data-role="X" data-set="xo">X</button>
+      <button type="button" class="piece" data-act="place" data-type="skater" data-role="O" data-set="xo">O</button>
+      <button type="button" class="piece" data-act="place" data-type="puck">Puck</button>
+      <button type="button" class="piece" data-act="place" data-type="pile" aria-label="Pile of pucks">Pile</button>
+      <button type="button" class="piece" data-act="place" data-type="cone">Cone</button>
+      <button type="button" class="piece" data-act="place" data-type="net">Net</button>
+      <button type="button" class="piece" data-act="place" data-type="tire">Tire</button>
+      <button type="button" class="piece" data-act="place" data-type="text">Text</button>
+      <div class="glabel actions">Actions</div>
+      <button type="button" class="action" data-act="tool" data-tool="skate">Skate</button>
+      <button type="button" class="action" data-act="tool" data-tool="carry" aria-label="Skate with puck">Carry</button>
+      <button type="button" class="action" data-act="tool" data-tool="back" aria-label="Backwards skate">Back</button>
+      <button type="button" class="action" data-act="tool" data-tool="pass">Pass</button>
+      <button type="button" class="action" data-act="tool" data-tool="shot">Shot</button>
+      <div class="glabel draw">Draw</div>
+      <button type="button" class="ink span2" id="draw-btn" data-act="tool" data-tool="draw">Draw</button>
+      <div class="palette" role="group" aria-label="Draw color">
+        <button type="button" class="swatch" data-act="color" data-color="#1a1a1a" style="background:#1a1a1a" aria-label="Black"></button>
+        <button type="button" class="swatch" data-act="color" data-color="#c8102e" style="background:#c8102e" aria-label="Red"></button>
+        <button type="button" class="swatch" data-act="color" data-color="#1f4fd8" style="background:#1f4fd8" aria-label="Blue"></button>
+        <button type="button" class="swatch" data-act="color" data-color="#1e8a3a" style="background:#1e8a3a" aria-label="Green"></button>
+        <button type="button" class="swatch" data-act="color" data-color="#ef8a14" style="background:#ef8a14" aria-label="Orange"></button>
+      </div>
+      <div class="glabel edit">Edit</div>
+      <button type="button" class="edit" data-act="tool" data-tool="select">Select</button>
+      <button type="button" class="edit" data-act="tool" data-tool="erase" aria-label="Erase tool. Tap objects to remove them.">Erase</button>
+      <button type="button" class="edit" data-act="clear">Clear</button>
+      <button type="button" class="edit" data-act="undo">Undo</button>
+      <button type="button" class="edit" data-act="redo">Redo</button>
     </div>
     <div id="bar">
       <input id="name" aria-label="Drill name" maxlength="60" autocomplete="off">
@@ -326,12 +430,7 @@
         <option value="full">Full</option>
       </select>
       <button type="button" data-act="flip" aria-label="Flip ends">Flip</button>
-      <button type="button" data-act="tool" data-tool="select">Select</button>
-      <button type="button" data-act="tool" data-tool="erase" aria-label="Erase tool. Tap objects to remove them.">Erase</button>
       <button type="button" data-act="delete" aria-label="Delete selected">Delete</button>
-      <button type="button" data-act="clear">Clear</button>
-      <button type="button" data-act="undo">Undo</button>
-      <button type="button" data-act="redo">Redo</button>
       <button type="button" data-act="notes">Notes</button>
       <button type="button" data-act="save">Save</button>
       <button type="button" data-act="drills">Drills</button>
@@ -635,11 +734,6 @@
     var dh = cam.h * scale;
     var ox = (cssW - dw) / 2;
     var oy = (cssH - dh) / 2;
-    // A one-end window (half, zone, 3/4, stations) keeps the cut line on the
-    // right edge of the screen. Neutral and full stay centered.
-    var touchesLeft = cam.x <= 0.5;
-    var touchesRight = cam.x + cam.w >= RINK_L - 0.5;
-    if (touchesLeft !== touchesRight) ox = cssW - pad - dw;
     return { scale: scale, ox: ox, oy: oy, cam: cam };
   }
   function worldFrom(px, py, t, flip) {
@@ -1919,6 +2013,7 @@
     if (viewSelect && VIEWS[doc.view]) viewSelect.value = doc.view;
     paintTeamBtn("home-btn", "home");
     paintTeamBtn("away-btn", "away");
+    paintDrawBtn();
     var labelBtn = document.getElementById("label-btn");
     var labelName = doc.labelSet === "units" ? "Unit" : (doc.labelSet === "xo" ? "XO" : "Pos");
     var labelHelp = doc.labelSet === "positions" ? "Positions. Switch to units" : (doc.labelSet === "units" ? "Units. Switch to X and O" : "X and O. Switch to positions");
@@ -1932,6 +2027,13 @@
     btn.style.background = fill;
     btn.style.color = inkFor(fill);
     btn.classList.toggle("active", state.team === team);
+  }
+  function paintDrawBtn() {
+    var btn = document.getElementById("draw-btn");
+    if (!btn) return;
+    var hex = state.color || "#1a1a1a";
+    btn.style.background = hex;
+    btn.style.color = inkFor(hex);
   }
   function syncForm() {
     nameInput.value = doc.name;
@@ -2225,6 +2327,8 @@
     var farLeft = screenFrom(200, 42.5, tf, true);
     check("flipped boards left", Math.abs(farLeft.x - tf.ox) < 0.5);
     doc.flip = false;
+    var wide = fit(1000, 400, homeCamera("half", false));
+    check("half centered", Math.abs(wide.ox - (1000 - wide.cam.w * wide.scale) / 2) < 1);
 
     var prevCur = null, prevLib = null;
     try { prevCur = localStorage.getItem(CUR_KEY); prevLib = localStorage.getItem(LIB_KEY); } catch (e) {}
