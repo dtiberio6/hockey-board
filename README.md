@@ -12,7 +12,7 @@ The phone stays in landscape. If you are holding it upright, turn it sideways. A
 
 The rink view is the dropdown. Half ends on the center line. Zone ends on the near blue line. 3/4 ends on the far blue line. Neutral is the ice between the inside edges of the end faceoff circles. Stations is the end zone with a gray divider from the boards to the blue line. Each view stays centered on the page. Flip swaps which end is on the left.
 
-On a phone, the tool sections sit on the left: teams, label set, pieces, actions, draw, and edit. The name, view, and file buttons stay along the bottom. On a computer, that whole panel is on the left. Draw uses the color you pick, and the palette is a short row of small chips.
+On a phone, teams, pieces, actions, draw, and edit fill the left edge in three columns, so the whole set stays on screen. The name, view, and file buttons are one short row under the rink. On a computer, the labeled panel stays on the left. Draw uses the color you pick.
 
 Three label sets. Pos is G, LD, RD, LW, C, RW. Unit is G, D1, D2, F1, F2, F3. XO is X and O for drill markings, and you can place as many as you need. Named players are one per team: a second click moves the one already on the ice. Defense get a dark ring. Both goalies are gray.
 
