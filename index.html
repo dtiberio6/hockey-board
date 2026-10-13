@@ -1403,7 +1403,7 @@
       if (existing) {
         pushHistory();
         shiftPiece(existing, world.x - existing.x, world.y - existing.y);
-        state.selected = { kind: "piece", id: existing.id };
+        state.selected = null;
         persist();
         draw();
         return;
@@ -1425,7 +1425,7 @@
       if (skater) claimPuck(piece, skater);
     }
     doc.pieces.push(piece);
-    state.selected = { kind: "piece", id: piece.id };
+    state.selected = null;
     persist();
     draw();
   }
@@ -1435,7 +1435,7 @@
     pushHistory();
     var piece = { id: uid(), type: "text", x: textAt.x, y: textAt.y, team: null, role: null, text: text };
     doc.pieces.push(piece);
-    state.selected = { kind: "piece", id: piece.id };
+    state.selected = null;
     textAt = null;
     persist();
     draw();
@@ -2237,9 +2237,11 @@
     state.placeType = "skater";
     state.placeRole = "C";
     dropPiece({ x: 10, y: 10 });
+    check("placed piece not selected", state.selected == null);
     dropPiece({ x: 22, y: 18 });
     var centers = doc.pieces.filter(function (p) { return p.role === "C"; });
     check("one center", centers.length === 1 && centers[0].x === 22 && centers[0].y === 18);
+    check("moved piece not selected", state.selected == null);
     state.placeType = "puck";
     state.placeRole = null;
     dropPiece({ x: 22, y: 18 });
