@@ -305,6 +305,7 @@
       <button type="button" data-act="place" data-type="text">Text</button>
       <button type="button" data-act="tool" data-tool="skate">Skate</button>
       <button type="button" data-act="tool" data-tool="carry" aria-label="Skate with puck">Carry</button>
+      <button type="button" data-act="tool" data-tool="back" aria-label="Backwards skate">Back</button>
       <button type="button" data-act="tool" data-tool="pass">Pass</button>
       <button type="button" data-act="tool" data-tool="shot">Shot</button>
       <button type="button" data-act="tool" data-tool="draw">Draw</button>
@@ -405,7 +406,7 @@
   var PUCK_OY = 1.5;
   var LIB_KEY = "rink-board-drills";
   var CUR_KEY = "rink-board-current";
-  var MARKS = { skate: 1, carry: 1, pass: 1, shot: 1, draw: 1 };
+  var MARKS = { skate: 1, carry: 1, pass: 1, shot: 1, back: 1, draw: 1 };
 
   var ice = document.getElementById("ice");
   var stage = document.getElementById("stage");
@@ -435,6 +436,7 @@
   var pointers = new Map();
   var gesture = null;
   var pinch = null;
+  var suppressGhost = null;
   var lockout = false;
   var clearArmed = false;
   var clearTimer = null;
@@ -874,6 +876,37 @@
     out[out.length - 1] = { x: b.x - (dx / len) * cut, y: b.y - (dy / len) * cut };
     return out;
   }
+  function drawParens(ctx, pts) {
+    if (!pts || pts.length < 2) return;
+    var gap = 3.6, span = 0.62, bow = 1.05;
+    var travel = 0, nextAt = gap * 0.5, n = 0;
+    function paren(x, y, ux, uy, side) {
+      var nx = -uy, ny = ux;
+      ctx.beginPath();
+      ctx.moveTo(x - ux * span, y - uy * span);
+      ctx.quadraticCurveTo(x + nx * bow * side, y + ny * bow * side, x + ux * span, y + uy * span);
+      ctx.stroke();
+    }
+    for (var s = 1; s < pts.length; s++) {
+      var ax = pts[s - 1].x, ay = pts[s - 1].y;
+      var bx = pts[s].x, by = pts[s].y;
+      var seg = Math.hypot(bx - ax, by - ay);
+      if (seg < 0.05) continue;
+      var ux = (bx - ax) / seg, uy = (by - ay) / seg;
+      while (nextAt <= travel + seg + 0.001) {
+        var t = (nextAt - travel) / seg;
+        paren(ax + (bx - ax) * t, ay + (by - ay) * t, ux, uy, n % 2 === 0 ? 1 : -1);
+        n++;
+        nextAt += gap;
+      }
+      travel += seg;
+    }
+    if (!n) {
+      var a0 = pts[0], b0 = pts[pts.length - 1];
+      var len = Math.hypot(b0.x - a0.x, b0.y - a0.y) || 1;
+      paren((a0.x + b0.x) / 2, (a0.y + b0.y) / 2, (b0.x - a0.x) / len, (b0.y - a0.y) / len, 1);
+    }
+  }
   function drawWave(ctx, pts) {
     if (!pts || pts.length < 2) return;
     var amp = 0.95, wave = 7, travel = 0, moved = false;
@@ -922,12 +955,17 @@
     var last = m.points[m.points.length - 1];
     var prev = m.points[m.points.length - 2];
     ctx.lineWidth = 0.36 + boost;
-    if (m.type === "skate" || m.type === "carry") {
+    if (m.type === "skate" || m.type === "carry" || m.type === "back") {
       var body = shortenPath(m.points, head * 0.62);
-      strokeSmooth(ctx, body);
-      if (m.type === "carry") {
-        ctx.lineWidth = 0.3 + boost;
-        drawWave(ctx, body);
+      if (m.type === "back") {
+        ctx.lineWidth = 0.4 + boost;
+        drawParens(ctx, body);
+      } else {
+        strokeSmooth(ctx, body);
+        if (m.type === "carry") {
+          ctx.lineWidth = 0.3 + boost;
+          drawWave(ctx, body);
+        }
       }
     } else {
       var a = m.points[0];
@@ -1153,7 +1191,7 @@
     }
     if (state.preview) drawMark(ctx, state.preview, 0);
     for (var p = 0; p < doc.pieces.length; p++) drawPiece(ctx, doc.pieces[p]);
-    if (state.ghost && state.tool === "place" && state.placeType === "skater") {
+    if (state.ghost && state.tool === "place" && state.placeType === "skater" && !ghostSuppressed(state.ghost)) {
       ctx.save();
       ctx.globalAlpha = 0.45;
       drawPiece(ctx, { type: "skater", x: state.ghost.x, y: state.ghost.y, team: state.team, role: state.placeRole });
@@ -1164,7 +1202,15 @@
   }
   function draw() {
     if (!state.cssW || !state.cssH) return;
+    // Place and draw tools never keep a selection, so a new object is not ringed in gold.
+    if (state.tool !== "select") state.selected = null;
     drawScene(ice.getContext("2d"), state.cssW, state.cssH, state.dpr);
+  }
+  function ghostSuppressed(world) {
+    return !!(suppressGhost && world && Math.hypot(world.x - suppressGhost.x, world.y - suppressGhost.y) < 3.2);
+  }
+  function isTrace(tool) {
+    return tool === "draw" || tool === "skate" || tool === "carry" || tool === "back";
   }
 
   function removeSelectedFromDoc(hit) {
@@ -1404,6 +1450,8 @@
         pushHistory();
         shiftPiece(existing, world.x - existing.x, world.y - existing.y);
         state.selected = null;
+        state.ghost = null;
+        suppressGhost = { x: world.x, y: world.y };
         persist();
         draw();
         return;
@@ -1426,6 +1474,8 @@
     }
     doc.pieces.push(piece);
     state.selected = null;
+    state.ghost = null;
+    suppressGhost = { x: world.x, y: world.y };
     persist();
     draw();
   }
@@ -1436,13 +1486,15 @@
     var piece = { id: uid(), type: "text", x: textAt.x, y: textAt.y, team: null, role: null, text: text };
     doc.pieces.push(piece);
     state.selected = null;
+    state.ghost = null;
+    suppressGhost = textAt ? { x: textAt.x, y: textAt.y } : null;
     textAt = null;
     persist();
     draw();
   }
   function commitInk(origin, points) {
     var type = state.tool;
-    var traced = type === "draw" || type === "skate" || type === "carry";
+    var traced = isTrace(type);
     var stored;
     if (traced) {
       if (!points || points.length < 2) return;
@@ -1544,7 +1596,7 @@
       return;
     }
     if (!gesture || gesture.pointerId !== e.pointerId) return;
-    if (gesture.type === "ink" && (state.tool === "draw" || state.tool === "skate" || state.tool === "carry")) {
+    if (gesture.type === "ink" && isTrace(state.tool)) {
       for (var i = 0; i < events.length; i++) addDrawPoint(toWorld(localPoint(events[i])));
       state.preview = previewMark(state.tool, gesture.points.slice());
       draw();
@@ -1609,7 +1661,7 @@
     if (gesture.type === "place") {
       if (screenDist(gesture.local, localPoint(e)) < 12) dropPiece(world);
     } else if (gesture.type === "ink") {
-      if (state.tool === "draw" || state.tool === "skate" || state.tool === "carry") commitInk(gesture.origin, gesture.points);
+      if (isTrace(state.tool)) commitInk(gesture.origin, gesture.points);
       else commitInk(gesture.origin, [gesture.origin, world]);
       state.preview = null;
     } else if (gesture.right && !gesture.moved) {
@@ -1688,6 +1740,8 @@
     state.tool = "place";
     state.placeType = type;
     state.placeRole = role || null;
+    state.ghost = null;
+    state.selected = null;
     syncPressed();
     draw();
   }
@@ -2026,7 +2080,12 @@
       if (state.ghost) { state.ghost = null; draw(); }
       return;
     }
-    state.ghost = toWorld(localPoint(e));
+    var world = toWorld(localPoint(e));
+    if (ghostSuppressed(world)) {
+      if (state.ghost) { state.ghost = null; draw(); }
+      return;
+    }
+    state.ghost = world;
     draw();
   }
   function onWheel(e) {
@@ -2259,6 +2318,18 @@
     var skate = doc.marks[doc.marks.length - 1];
     check("skate trace", skate && skate.type === "skate" && skate.points.length === 3);
     check("new mark not selected", state.selected == null);
+    state.tool = "back";
+    commitInk({ x: 8, y: 74 }, [{ x: 8, y: 74 }, { x: 28, y: 74 }]);
+    var back = doc.marks[doc.marks.length - 1];
+    check("back trace", back && back.type === "back" && back.points.length === 2);
+    check("back not selected", state.selected == null);
+    state.tool = "place";
+    state.selected = { kind: "piece", id: "gone" };
+    state.cssW = 400;
+    state.cssH = 300;
+    state.dpr = 1;
+    draw();
+    check("place hides selection", state.selected == null);
     state.placeType = "skater";
     state.placeRole = "X";
     state.tool = "place";
@@ -2298,7 +2369,10 @@
       { id: "gt", type: "skater", x: 18, y: 58, team: "away", role: "G" },
       { id: "f2", type: "skater", x: 70, y: 50, team: "away", role: "F2" }
     ];
-    doc.marks = [{ id: "c", type: "carry", color: "#1a1a1a", points: [{ x: 50, y: 42 }, { x: 70, y: 42 }] }];
+    doc.marks = [
+      { id: "c", type: "carry", color: "#1a1a1a", points: [{ x: 50, y: 42 }, { x: 70, y: 42 }] },
+      { id: "bk", type: "back", team: "home", color: "#1a1a1a", points: [{ x: 8, y: 74 }, { x: 28, y: 74 }] }
+    ];
     state.selected = null;
     state.preview = null;
     var c = document.createElement("canvas");
@@ -2330,6 +2404,10 @@
     var shaft = at(60, 42);
     check("carry wave", wave && !isIcePixel(wave), rgb(wave));
     check("carry shaft", shaft && !isIcePixel(shaft), rgb(shaft));
+    var paren = at(9.8, 74.52);
+    var parenGap = at(9.8, 74);
+    check("back paren", paren && !isIcePixel(paren), rgb(paren));
+    check("back has no shaft", parenGap && isIcePixel(parenGap), rgb(parenGap));
 
     var failed = lines.some(function (line) { return line.indexOf("FAIL") === 0; });
     var passed = lines.filter(function (line) { return line.indexOf("PASS") === 0; }).length;
