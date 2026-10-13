@@ -1459,7 +1459,7 @@
     doc.marks.push(mark);
     if (type === "pass") handoffPass(stored);
     if (type === "shot") shootPuck(stored);
-    state.selected = { kind: "mark", id: mark.id };
+    state.selected = null;
     persist();
   }
 
@@ -2256,6 +2256,7 @@
     commitInk({ x: 1, y: 1 }, [{ x: 1, y: 1 }, { x: 5, y: 3 }, { x: 9, y: 1 }]);
     var skate = doc.marks[doc.marks.length - 1];
     check("skate trace", skate && skate.type === "skate" && skate.points.length === 3);
+    check("new mark not selected", state.selected == null);
     state.placeType = "skater";
     state.placeRole = "X";
     state.tool = "place";
