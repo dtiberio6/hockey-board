@@ -220,6 +220,29 @@
     white-space: nowrap;
   }
   #toast.show { opacity: 1; }
+  #menu {
+    position: fixed;
+    z-index: 20;
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px;
+    background: #121820;
+    border-radius: 12px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  }
+  #menu.open { display: flex; }
+  #menu button {
+    min-width: 132px;
+    height: 44px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    background: #243140;
+    color: #e8eef7;
+    font: 700 14px/1 system-ui, sans-serif;
+    text-align: left;
+  }
 </style>
 </head>
 <body>
@@ -270,6 +293,7 @@
       <button type="button" data-act="place" data-type="skater" data-role="X" data-set="xo">X</button>
       <button type="button" data-act="place" data-type="skater" data-role="O" data-set="xo">O</button>
       <button type="button" data-act="place" data-type="puck">Puck</button>
+      <button type="button" data-act="place" data-type="pile" aria-label="Pile of pucks">Pile</button>
       <button type="button" data-act="place" data-type="cone">Cone</button>
       <button type="button" data-act="place" data-type="net">Net</button>
       <button type="button" data-act="place" data-type="tire">Tire</button>
@@ -284,6 +308,11 @@
     <div id="stage">
       <canvas id="ice"></canvas>
       <div id="toast" role="status" aria-live="polite"></div>
+      <div id="menu" role="menu">
+        <button type="button" data-menu="erase" role="menuitem">Erase?</button>
+        <button type="button" data-menu="assign" role="menuitem">Assign puck</button>
+        <button type="button" data-menu="flip" role="menuitem">Flip net</button>
+      </div>
       <div id="notesheet" class="sheet">
         <textarea id="notes" placeholder="Setup, cues, rotation" aria-label="Drill notes"></textarea>
         <div class="sheet-actions"><button type="button" data-act="close-notes">Done</button></div>
@@ -454,13 +483,13 @@
   }
   function tidyCarriers(pieces) {
     var ids = {};
+    var taken = false;
     for (var i = 0; i < pieces.length; i++) if (pieces[i].type === "skater") ids[pieces[i].id] = 1;
-    var seen = {};
     for (var j = 0; j < pieces.length; j++) {
       var p = pieces[j];
       if (p.type !== "puck" || !p.carrierId) continue;
-      if (!ids[p.carrierId] || seen[p.carrierId]) p.carrierId = null;
-      else seen[p.carrierId] = 1;
+      if (!ids[p.carrierId] || taken) p.carrierId = null;
+      else taken = true;
     }
   }
   function validPiece(p) {
@@ -596,6 +625,7 @@
   function pieceHitRadius(p) {
     if (p.type === "skater") return (p.role === "G" ? 2.65 : 2.15) + (DEFENSE[p.role] ? 1.35 : 0.3);
     if (p.type === "puck") return 1.5;
+    if (p.type === "pile") return 1.8;
     if (p.type === "cone" || p.type === "tire") return 2.4;
     if (p.type === "net") return 4;
     if (p.type === "text") return Math.max(2.4, ((p.text || "").length * 1.2) / 2 + 1.2);
@@ -813,11 +843,16 @@
     }
     if (moved) ctx.stroke();
   }
+  function markInk(m) {
+    if (m && (m.team === "home" || m.team === "away")) return teamFill(m.team);
+    return (m && m.color) || "#1a1a1a";
+  }
   function drawMark(ctx, m, widthBoost) {
     if (!m.points || m.points.length < 2) return;
     ctx.save();
-    ctx.strokeStyle = m.color;
-    ctx.fillStyle = m.color;
+    var ink = markInk(m);
+    ctx.strokeStyle = ink;
+    ctx.fillStyle = ink;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     var boost = widthBoost || 0;
@@ -827,11 +862,10 @@
       ctx.restore();
       return;
     }
-    var heavy = m.type === "shot";
-    var head = heavy ? 3.3 : 2.4;
+    var head = m.type === "shot" ? 3.3 : 2.4;
     var last = m.points[m.points.length - 1];
     var prev = m.points[m.points.length - 2];
-    ctx.lineWidth = (heavy ? 0.82 : 0.36) + boost;
+    ctx.lineWidth = 0.36 + boost;
     if (m.type === "skate" || m.type === "carry") {
       var body = shortenPath(m.points, head * 0.62);
       strokeSmooth(ctx, body);
@@ -841,15 +875,29 @@
       }
     } else {
       var a = m.points[0];
-      if (m.type === "pass" && !boost) ctx.setLineDash([1.35, 0.9]);
       var dx = last.x - a.x, dy = last.y - a.y;
       var len = Math.hypot(dx, dy) || 1;
+      var ux = dx / len, uy = dy / len;
       var trim = Math.min(head * 0.62, len * 0.4);
-      ctx.beginPath();
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(last.x - (dx / len) * trim, last.y - (dy / len) * trim);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      var ex = last.x - ux * trim, ey = last.y - uy * trim;
+      if (m.type === "shot") {
+        var gap = 0.42;
+        var px = -uy * gap, py = ux * gap;
+        ctx.lineWidth = 0.32 + boost;
+        ctx.beginPath();
+        ctx.moveTo(a.x + px, a.y + py);
+        ctx.lineTo(ex + px, ey + py);
+        ctx.moveTo(a.x - px, a.y - py);
+        ctx.lineTo(ex - px, ey - py);
+        ctx.stroke();
+      } else {
+        if (m.type === "pass" && !boost) ctx.setLineDash([1.35, 0.9]);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
     }
     if (!boost) drawArrowHead(ctx, prev.x, prev.y, last.x, last.y, head);
     ctx.restore();
@@ -898,6 +946,13 @@
       ctx.strokeStyle = ink;
       ctx.stroke();
       drawLabel(ctx, p.role || "", p.x, p.y, goalie ? "#1b1e22" : text, r * 1.7);
+      if (puckOf(p.id)) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r + (defense ? 1.6 : 0.72), 0, Math.PI * 2);
+        ctx.strokeStyle = "#ffe14a";
+        ctx.lineWidth = 0.4;
+        ctx.stroke();
+      }
       ctx.restore();
       return;
     }
@@ -909,6 +964,17 @@
       ctx.lineWidth = 0.12;
       ctx.strokeStyle = "#4a4a4a";
       ctx.stroke();
+    } else if (p.type === "pile") {
+      var blobs = [[-0.5, 0.18], [0.42, 0.22], [-0.05, -0.42]];
+      for (var b = 0; b < blobs.length; b++) {
+        ctx.beginPath();
+        ctx.arc(p.x + blobs[b][0], p.y + blobs[b][1], 0.42, 0, Math.PI * 2);
+        ctx.fillStyle = "#161616";
+        ctx.fill();
+        ctx.lineWidth = 0.08;
+        ctx.strokeStyle = "#5a5a5a";
+        ctx.stroke();
+      }
     } else if (p.type === "cone") {
       ctx.beginPath();
       ctx.moveTo(p.x, p.y - 1.8);
@@ -1140,27 +1206,41 @@
   function claimPuck(puck, skater) {
     for (var i = 0; i < doc.pieces.length; i++) {
       var q = doc.pieces[i];
-      if (q.type === "puck" && q.carrierId === skater.id && q.id !== puck.id) q.carrierId = null;
+      if (q.type === "puck" && q.id !== puck.id) q.carrierId = null;
     }
     puck.carrierId = skater.id;
     puck.x = skater.x + PUCK_OX;
     puck.y = skater.y + PUCK_OY;
   }
+  function assignedPuck() {
+    for (var i = 0; i < doc.pieces.length; i++) {
+      var p = doc.pieces[i];
+      if (p.type === "puck" && p.carrierId && pieceById(p.carrierId)) return p;
+    }
+    return null;
+  }
+  function puckForAction(origin) {
+    var start = nearestSkater(origin.x, origin.y, 6);
+    var puck = start ? puckOf(start.id) : null;
+    if (!puck) puck = assignedPuck();
+    return puck;
+  }
+  function settleMovedPuck(puck) {
+    if (!puck || puck.type !== "puck") return;
+    var onto = skaterAt({ x: puck.x, y: puck.y });
+    if (onto) claimPuck(puck, onto);
+  }
+  function giveAssignedPuck(skater) {
+    var puck = assignedPuck();
+    if (!puck || !skater) return false;
+    claimPuck(puck, skater);
+    return true;
+  }
   function handoffPass(points) {
     if (!points || points.length < 2) return;
-    var a = points[0];
-    var b = points[points.length - 1];
-    var start = nearestSkater(a.x, a.y, 6);
-    var puck = start ? puckOf(start.id) : null;
-    if (!puck) {
-      var carried = [];
-      for (var i = 0; i < doc.pieces.length; i++) {
-        var q = doc.pieces[i];
-        if (q.type === "puck" && q.carrierId && pieceById(q.carrierId)) carried.push(q);
-      }
-      if (carried.length === 1) puck = carried[0];
-    }
+    var puck = puckForAction(points[0]);
     if (!puck) return;
+    var b = points[points.length - 1];
     var end = nearestSkater(b.x, b.y, 6);
     if (end) claimPuck(puck, end);
     else {
@@ -1169,9 +1249,68 @@
       puck.y = b.y;
     }
   }
+  function netTarget(x, y) {
+    var best = null;
+    var bestD = 16;
+    var goals = [{ x: 11, y: 42.5, into: -1 }, { x: 189, y: 42.5, into: 1 }];
+    for (var g = 0; g < goals.length; g++) {
+      var d = Math.hypot(x - goals[g].x, y - goals[g].y);
+      if (d <= bestD) {
+        bestD = d;
+        best = { x: goals[g].x + goals[g].into * 1.6, y: goals[g].y };
+      }
+    }
+    for (var i = 0; i < doc.pieces.length; i++) {
+      var p = doc.pieces[i];
+      if (p.type !== "net") continue;
+      var dn = Math.hypot(x - p.x, y - p.y);
+      if (dn <= bestD) {
+        var dir = p.facing === 1 || p.facing === -1 ? p.facing : (p.x < 100 ? 1 : -1);
+        bestD = dn;
+        best = { x: p.x + dir * 1.5, y: p.y };
+      }
+    }
+    return best;
+  }
+  function shootPuck(points) {
+    if (!points || points.length < 2) return;
+    var puck = puckForAction(points[0]);
+    if (!puck) return;
+    var b = points[points.length - 1];
+    var spot = netTarget(b.x, b.y);
+    puck.carrierId = null;
+    if (spot) { puck.x = spot.x; puck.y = spot.y; }
+    else { puck.x = b.x; puck.y = b.y; }
+  }
+  function actorTeam(origin) {
+    var s = nearestSkater(origin.x, origin.y, 6);
+    if (s) return teamOf(s.team);
+    return teamOf(state.team);
+  }
+  function previewMark(type, points) {
+    var mark = { type: type, color: state.color, points: points };
+    if (type !== "draw") mark.team = actorTeam(points[0]);
+    return mark;
+  }
   function flipNet(p) {
     var dir = p.facing === 1 || p.facing === -1 ? p.facing : (p.x < 100 ? 1 : -1);
     p.facing = -dir;
+  }
+  var menuHit = null;
+  function openMenu(clientX, clientY, hit) {
+    menuHit = hit;
+    var menu = document.getElementById("menu");
+    var piece = hit && hit.kind === "piece" ? pieceById(hit.id) : null;
+    menu.querySelector('[data-menu="assign"]').hidden = !(piece && piece.type === "skater");
+    menu.querySelector('[data-menu="flip"]').hidden = !(piece && piece.type === "net");
+    menu.style.left = Math.max(8, Math.min(clientX, window.innerWidth - 160)) + "px";
+    menu.style.top = Math.max(8, Math.min(clientY, window.innerHeight - 170)) + "px";
+    menu.classList.add("open");
+  }
+  function closeMenu() {
+    menuHit = null;
+    var menu = document.getElementById("menu");
+    if (menu) menu.classList.remove("open");
   }
   function dropPiece(world) {
     if (state.placeType === "text") {
@@ -1241,8 +1380,10 @@
     disarmClear();
     pushHistory();
     var mark = { id: uid(), type: type, color: state.color, points: stored };
+    if (type !== "draw") mark.team = actorTeam(stored[0]);
     doc.marks.push(mark);
     if (type === "pass") handoffPass(stored);
+    if (type === "shot") shootPuck(stored);
     state.selected = { kind: "mark", id: mark.id };
     persist();
   }
@@ -1274,7 +1415,7 @@
       var hitRight = hitTest(world);
       state.preview = null;
       state.ghost = null;
-      if (!hitRight || hitRight.kind !== "piece") { draw(); return; }
+      if (!hitRight) { draw(); return; }
       state.selected = hitRight;
       gesture = { type: "drag", pointerId: e.pointerId, origin: world, local: local, hit: hitRight, moved: false, saved: false, start: startOf(hitRight), right: true };
       draw();
@@ -1297,7 +1438,7 @@
     }
     if (MARKS[state.tool]) {
       gesture = { type: "ink", pointerId: e.pointerId, origin: world, local: local, points: [world] };
-      state.preview = { type: state.tool, color: state.color, points: [world, world] };
+      state.preview = previewMark(state.tool, [world, world]);
       draw();
     }
   }
@@ -1330,7 +1471,7 @@
     if (!gesture || gesture.pointerId !== e.pointerId) return;
     if (gesture.type === "ink" && (state.tool === "draw" || state.tool === "skate" || state.tool === "carry")) {
       for (var i = 0; i < events.length; i++) addDrawPoint(toWorld(localPoint(events[i])));
-      state.preview = { type: state.tool, color: state.color, points: gesture.points.slice() };
+      state.preview = previewMark(state.tool, gesture.points.slice());
       draw();
       return;
     }
@@ -1366,7 +1507,7 @@
       return;
     }
     if (gesture.type === "ink") {
-      state.preview = { type: state.tool, color: state.color, points: [gesture.origin, world] };
+      state.preview = previewMark(state.tool, [gesture.origin, world]);
       draw();
     }
   }
@@ -1397,14 +1538,13 @@
       else commitInk(gesture.origin, [gesture.origin, world]);
       state.preview = null;
     } else if (gesture.right && !gesture.moved) {
-      var net = gesture.hit && pieceById(gesture.hit.id);
-      if (net && net.type === "net") {
-        pushHistory();
-        flipNet(net);
-        persist();
+      openMenu(e.clientX, e.clientY, gesture.hit);
+    } else if (gesture.type === "drag") {
+      if (gesture.moved && gesture.hit && gesture.hit.kind === "piece") {
+        var movedPiece = pieceById(gesture.hit.id);
+        if (movedPiece && movedPiece.type === "puck") settleMovedPuck(movedPiece);
       }
-    } else if (gesture.saved) {
-      persist();
+      if (gesture.saved) persist();
     }
     gesture = null;
     draw();
@@ -1790,6 +1930,7 @@
   document.addEventListener("keydown", function (e) {
     var tag = document.activeElement && document.activeElement.tagName;
     var typing = tag === "INPUT" || tag === "TEXTAREA";
+    if (e.key === "Escape") closeMenu();
     if ((e.key === "Delete" || e.key === "Backspace") && !typing) {
       if (state.selected) { e.preventDefault(); deleteSelection(); }
     } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !typing) {
@@ -1831,6 +1972,44 @@
   });
   ice.addEventListener("wheel", onWheel, { passive: false });
   ice.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  document.addEventListener("pointerdown", function (e) {
+    var menu = document.getElementById("menu");
+    if (!menu.classList.contains("open")) return;
+    if (e.target.closest && e.target.closest("#menu")) return;
+    closeMenu();
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
+  document.getElementById("menu").addEventListener("click", function (e) {
+    var btn = e.target.closest("button");
+    if (!btn || !menuHit) return;
+    var act = btn.dataset.menu;
+    var hit = menuHit;
+    closeMenu();
+    if (act === "erase") {
+      disarmClear();
+      pushHistory();
+      removeSelectedFromDoc(hit);
+      persist();
+      draw();
+    } else if (act === "assign") {
+      var skater = pieceById(hit.id);
+      if (!skater) return;
+      if (!assignedPuck()) { toast("No puck is assigned"); return; }
+      disarmClear();
+      pushHistory();
+      giveAssignedPuck(skater);
+      persist();
+      draw();
+    } else if (act === "flip") {
+      var net = pieceById(hit.id);
+      if (!net) return;
+      pushHistory();
+      flipNet(net);
+      persist();
+      draw();
+    }
+  });
   ice.addEventListener("pointerdown", requestLandscape);
 
   function resize() {
@@ -1864,13 +2043,14 @@
       { id: "f2", type: "skater", x: 56, y: 62, team: "away", role: "F2" },
       { id: "og", type: "skater", x: 70, y: 18, team: "away", role: "G" },
       { id: "cone", type: "cone", x: 62, y: 30 },
+      { id: "pile", type: "pile", x: 72, y: 34 },
       { id: "puck", type: "puck", x: 52.3, y: 37.5, carrierId: "rw" }
     ];
     doc.marks = [
-      { id: "sk", type: "skate", color: "#1a1a1a", points: [{ x: 28, y: 24 }, { x: 36, y: 16 }, { x: 46, y: 18 }] },
-      { id: "ca", type: "carry", color: "#1f4fd8", points: [{ x: 22, y: 50 }, { x: 34, y: 44 }, { x: 48, y: 52 }, { x: 64, y: 42 }] },
-      { id: "pa", type: "pass", color: "#c8102e", points: [{ x: 50, y: 36 }, { x: 72, y: 24 }] },
-      { id: "sh", type: "shot", color: "#1e8a3a", points: [{ x: 58, y: 40 }, { x: 20, y: 42.5 }] }
+      { id: "sk", type: "skate", color: "#1a1a1a", team: "home", points: [{ x: 28, y: 24 }, { x: 36, y: 16 }, { x: 46, y: 18 }] },
+      { id: "ca", type: "carry", color: "#1f4fd8", team: "home", points: [{ x: 22, y: 50 }, { x: 34, y: 44 }, { x: 48, y: 52 }, { x: 64, y: 42 }] },
+      { id: "pa", type: "pass", color: "#c8102e", team: "away", points: [{ x: 56, y: 62 }, { x: 40, y: 48 }] },
+      { id: "sh", type: "shot", color: "#1e8a3a", team: "home", points: [{ x: 50, y: 36 }, { x: 16, y: 42.5 }] }
     ];
   }
 
@@ -2005,6 +2185,22 @@
     var net = { id: "net", type: "net", x: 40, y: 40, facing: 1 };
     flipNet(net);
     check("net flip", net.facing === -1);
+    var loose = { id: "loose", type: "puck", x: 40, y: 16 };
+    doc.pieces.push(loose);
+    settleMovedPuck(loose);
+    check("drag assigns", loose.carrierId === "rw" && carried.carrierId == null);
+    check("one puck", doc.pieces.filter(function (p) { return p.type === "puck" && p.carrierId; }).length === 1);
+    giveAssignedPuck(centers[0]);
+    check("menu assign", loose.carrierId === centers[0].id && Math.abs(loose.x - (centers[0].x + 2.3)) < 0.01);
+    state.tool = "shot";
+    commitInk({ x: centers[0].x, y: centers[0].y }, [{ x: centers[0].x, y: centers[0].y }, { x: 14, y: 42.5 }]);
+    var shot = doc.marks[doc.marks.length - 1];
+    check("shot in net", loose.carrierId == null && loose.x < 11 && Math.abs(loose.y - 42.5) < 0.1);
+    check("shot team", shot && shot.type === "shot" && shot.team === "home");
+    state.placeType = "pile";
+    state.placeRole = null;
+    dropPiece({ x: 15, y: 70 });
+    check("pile", doc.pieces.some(function (p) { return p.type === "pile" && p.x === 15; }));
 
     doc.flip = false;
     doc.camera = { x: 0, y: 0, w: 100, h: 85 };

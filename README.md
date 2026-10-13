@@ -16,7 +16,9 @@ Three label sets. Pos is G, LD, RD, LW, C, RW. Unit is G, D1, D2, F1, F2, F3. XO
 
 Home and Away are solid colors you can tell apart. Tap a team to place it. Tap the active team again to change its color. The mouse wheel over the ice changes which player is armed, and the marker follows the cursor until you click.
 
-Drop a puck on a player and it stays with them. A pass moves that puck to the player at the end of the line. Skate and Carry follow your stroke. Pass and Shot stay straight. Right-click and drag moves a piece. Right-click a net without dragging to turn it around.
+Drop a puck on a player, or drag one onto a player, and it stays with them. That player gets a yellow ring. Only one puck is assigned. The rest, and a pile of pucks, sit loose. Right-click a player and choose Assign puck to move the assigned puck to them. A pass moves it to the player at the end of the line. A shot puts it in the net.
+
+Skate, Carry, Pass, and Shot follow the color of the team that makes the play. A shot is a double line. Draw still uses the color chips. Right-click and drag moves a piece. Right-click without dragging asks Erase?, and a net can be flipped from that menu.
 
 Select a piece or a line, then Delete. Erase removes whatever you tap, one after another. Clear asks you to tap again so a miss does not wipe the drill. Undo brings it back.
 
