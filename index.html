@@ -30,38 +30,39 @@
   button, input { font-family: inherit; }
   #app { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
   #stage { position: relative; flex: 1; min-width: 0; min-height: 0; touch-action: none; order: 0; }
-  #bar { order: 1; }
+  #dock { order: 1; display: flex; flex-direction: column; flex: none; min-width: 0; background: #121820; }
   #ice { width: 100%; height: 100%; display: block; touch-action: none; }
-  #bar {
-    flex: none;
+  #tools, #bar {
     display: flex;
     flex-direction: row;
     align-items: center;
     gap: 4px;
-    height: 64px;
-    padding: 6px;
+    height: 52px;
+    padding: 4px;
     background: #121820;
     overflow-x: auto;
     overflow-y: hidden;
     touch-action: pan-x;
   }
-  #bar::-webkit-scrollbar { height: 4px; width: 4px; }
-  #bar::-webkit-scrollbar-thumb { background: #3a4658; border-radius: 4px; }
-  #name {
-    width: 132px;
-    height: 48px;
+  #dock::-webkit-scrollbar, #tools::-webkit-scrollbar, #bar::-webkit-scrollbar { height: 4px; width: 4px; }
+  #dock::-webkit-scrollbar-thumb, #tools::-webkit-scrollbar-thumb, #bar::-webkit-scrollbar-thumb { background: #3a4658; border-radius: 4px; }
+  #name, #view {
+    height: 44px;
     flex: none;
     border: 0;
     border-radius: 8px;
     background: #243140;
     color: #fff;
     font-size: 16px;
+    font-weight: 700;
     padding: 0 8px;
   }
-  #bar button {
+  #name { width: 120px; }
+  #view { min-width: 104px; }
+  #dock button {
     flex: none;
-    min-width: 48px;
-    height: 48px;
+    min-width: 44px;
+    height: 44px;
     padding: 0 8px;
     border: 0;
     border-radius: 10px;
@@ -70,13 +71,76 @@
     font-size: 12px;
     font-weight: 700;
   }
-  #bar button.active { background: #e2b340; color: #1c1404; }
-  #bar button.armed { background: #c8102e; color: #fff; }
-  #bar button:disabled { opacity: 0.35; }
-  #bar button.team { box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); }
-  #bar button.team.active { box-shadow: inset 0 0 0 3px #e2b340; }
-  #bar button.swatch { box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); }
-  #bar button.swatch.active { box-shadow: inset 0 0 0 3px #fff; }
+  #dock button.active { background: #e2b340; color: #1c1404; }
+  #dock button.armed { background: #c8102e; color: #fff; }
+  #dock button:disabled { opacity: 0.35; }
+  #dock button.team { box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); }
+  #dock button.team.active { box-shadow: inset 0 0 0 3px #e2b340; }
+  #dock button.swatch { box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); min-width: 44px; }
+  #dock button.swatch.active { box-shadow: inset 0 0 0 3px #fff; }
+  @media (orientation: landscape) and (min-height: 521px), (hover: hover) and (pointer: fine) and (min-width: 900px) {
+    #app { flex-direction: row; }
+    #dock {
+      order: 0;
+      width: 156px;
+      height: auto;
+      min-height: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      touch-action: pan-y;
+    }
+    #stage { order: 1; }
+    #tools, #bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-auto-rows: 46px;
+      align-content: start;
+      height: auto;
+      width: 100%;
+      overflow: visible;
+      touch-action: pan-y;
+    }
+    #name, #view, .span2 { grid-column: 1 / -1; width: 100%; }
+    #dock button { width: 100%; min-width: 0; height: 46px; padding: 0 2px; }
+  }
+  @media (orientation: landscape) and (max-height: 520px) {
+    #app {
+      display: grid;
+      grid-template-columns: 112px minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr) auto;
+    }
+    #dock { display: contents; }
+    #tools {
+      grid-column: 1;
+      grid-row: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-auto-rows: 44px;
+      align-content: start;
+      width: auto;
+      height: auto;
+      min-height: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      touch-action: pan-y;
+    }
+    #stage { grid-column: 2; grid-row: 1; }
+    #bar {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      display: flex;
+      flex-direction: row;
+      width: auto;
+      height: 52px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      touch-action: pan-x;
+    }
+    #name, #view, .span2 { grid-column: auto; width: auto; }
+    #name { width: 96px; }
+    #dock button { width: auto; min-width: 44px; height: 44px; padding: 0 8px; }
+    #tools button { width: 100%; min-width: 0; padding: 0 2px; }
+  }
   #gate {
     display: none;
     position: fixed;
@@ -96,43 +160,6 @@
   @media (max-width: 700px) and (orientation: portrait) {
     #gate { display: flex; }
     #app { visibility: hidden; }
-  }
-  @media (orientation: landscape) {
-    #app { flex-direction: row; }
-    #bar {
-      width: 124px;
-      height: auto;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-auto-rows: 46px;
-      align-content: start;
-      gap: 4px;
-      overflow-x: hidden;
-      overflow-y: auto;
-      touch-action: pan-y;
-      padding: 6px;
-    }
-    #name, .span2 { grid-column: 1 / -1; }
-    #name { width: 100%; height: 42px; }
-    #bar button { width: 100%; min-width: 0; height: 46px; padding: 0 2px; }
-  }
-  @media (orientation: landscape) and (max-height: 520px) {
-    #app { flex-direction: column; }
-    #bar {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      width: auto;
-      height: 58px;
-      grid-template-columns: none;
-      grid-auto-rows: auto;
-      overflow-x: auto;
-      overflow-y: hidden;
-      touch-action: pan-x;
-    }
-    #name, .span2 { grid-column: auto; width: auto; }
-    #name { width: 112px; height: 44px; }
-    #bar button { width: auto; min-width: 44px; height: 44px; padding: 0 8px; }
   }
   .sheet {
     position: absolute;
@@ -251,30 +278,8 @@
     <p>Turn your phone sideways</p>
   </div>
   <div id="app">
-    <div id="bar">
-      <input id="name" aria-label="Drill name" maxlength="60" autocomplete="off">
-      <button type="button" data-act="view" data-view="half">Half</button>
-      <button type="button" data-act="view" data-view="zone">Zone</button>
-      <button type="button" data-act="view" data-view="three">3/4</button>
-      <button type="button" data-act="view" data-view="neutral">Neutral</button>
-      <button type="button" data-act="view" data-view="full">Full</button>
-      <button type="button" data-act="flip" aria-label="Flip ends">Flip</button>
-      <button type="button" data-act="tool" data-tool="select">Select</button>
-      <button type="button" data-act="tool" data-tool="erase" aria-label="Erase tool. Tap objects to remove them.">Erase</button>
-      <button type="button" data-act="delete" aria-label="Delete selected">Delete</button>
-      <button type="button" data-act="clear">Clear</button>
-      <button type="button" data-act="undo">Undo</button>
-      <button type="button" data-act="redo">Redo</button>
-      <button type="button" data-act="tool" data-tool="skate">Skate</button>
-      <button type="button" data-act="tool" data-tool="carry" aria-label="Skate with puck">Carry</button>
-      <button type="button" data-act="tool" data-tool="pass">Pass</button>
-      <button type="button" data-act="tool" data-tool="shot">Shot</button>
-      <button type="button" data-act="tool" data-tool="draw">Draw</button>
-      <button type="button" class="swatch" data-act="color" data-color="#1a1a1a" style="background:#1a1a1a" aria-label="Black"></button>
-      <button type="button" class="swatch" data-act="color" data-color="#c8102e" style="background:#c8102e" aria-label="Red"></button>
-      <button type="button" class="swatch" data-act="color" data-color="#1f4fd8" style="background:#1f4fd8" aria-label="Blue"></button>
-      <button type="button" class="swatch" data-act="color" data-color="#1e8a3a" style="background:#1e8a3a" aria-label="Green"></button>
-      <button type="button" class="swatch" data-act="color" data-color="#ef8a14" style="background:#ef8a14" aria-label="Orange"></button>
+    <div id="dock">
+    <div id="tools">
       <button type="button" class="team" data-act="team" data-team="home" id="home-btn">Home</button>
       <button type="button" class="team" data-act="team" data-team="away" id="away-btn">Away</button>
       <button type="button" data-act="labels" id="label-btn" aria-label="Toggle position labels">Pos</button>
@@ -298,12 +303,41 @@
       <button type="button" data-act="place" data-type="net">Net</button>
       <button type="button" data-act="place" data-type="tire">Tire</button>
       <button type="button" data-act="place" data-type="text">Text</button>
+      <button type="button" data-act="tool" data-tool="skate">Skate</button>
+      <button type="button" data-act="tool" data-tool="carry" aria-label="Skate with puck">Carry</button>
+      <button type="button" data-act="tool" data-tool="pass">Pass</button>
+      <button type="button" data-act="tool" data-tool="shot">Shot</button>
+      <button type="button" data-act="tool" data-tool="draw">Draw</button>
+      <button type="button" class="swatch" data-act="color" data-color="#1a1a1a" style="background:#1a1a1a" aria-label="Black"></button>
+      <button type="button" class="swatch" data-act="color" data-color="#c8102e" style="background:#c8102e" aria-label="Red"></button>
+      <button type="button" class="swatch" data-act="color" data-color="#1f4fd8" style="background:#1f4fd8" aria-label="Blue"></button>
+      <button type="button" class="swatch" data-act="color" data-color="#1e8a3a" style="background:#1e8a3a" aria-label="Green"></button>
+      <button type="button" class="swatch" data-act="color" data-color="#ef8a14" style="background:#ef8a14" aria-label="Orange"></button>
+    </div>
+    <div id="bar">
+      <input id="name" aria-label="Drill name" maxlength="60" autocomplete="off">
+      <select id="view" aria-label="Rink view">
+        <option value="half">Half</option>
+        <option value="zone">Zone</option>
+        <option value="three">3/4</option>
+        <option value="neutral">Neutral</option>
+        <option value="stations">Stations</option>
+        <option value="full">Full</option>
+      </select>
+      <button type="button" data-act="flip" aria-label="Flip ends">Flip</button>
+      <button type="button" data-act="tool" data-tool="select">Select</button>
+      <button type="button" data-act="tool" data-tool="erase" aria-label="Erase tool. Tap objects to remove them.">Erase</button>
+      <button type="button" data-act="delete" aria-label="Delete selected">Delete</button>
+      <button type="button" data-act="clear">Clear</button>
+      <button type="button" data-act="undo">Undo</button>
+      <button type="button" data-act="redo">Redo</button>
       <button type="button" data-act="notes">Notes</button>
       <button type="button" data-act="save">Save</button>
       <button type="button" data-act="drills">Drills</button>
       <button type="button" data-act="png" aria-label="Export image">Image</button>
       <button type="button" data-act="export" aria-label="Export drills">Export</button>
       <button type="button" data-act="import" aria-label="Import drills">Import</button>
+    </div>
     </div>
     <div id="stage">
       <canvas id="ice"></canvas>
@@ -346,11 +380,15 @@
   // Flip stores the other end's window and mirrors x so that end's boards sit on the left.
   var RINK_L = 200;
   var RINK_W = 85;
+  // Each window ends one foot past the line that should sit on the edge.
+  // Center line is 99–101, near blue 74–76, far blue 124–126.
+  // Neutral runs from just outside one circle's center-ice edge (46) to the other (154).
   var VIEWS = {
-    half: [0, 100],
-    zone: [0, 75],
-    three: [0, 125],
-    neutral: [46, 108],
+    half: [0, 102],
+    zone: [0, 77],
+    three: [0, 127],
+    neutral: [45, 110],
+    stations: [0, 77],
     full: [0, 200]
   };
   var DEFENSE = { LD: 1, RD: 1, D1: 1, D2: 1 };
@@ -587,13 +625,20 @@
   }
 
   function fit(cssW, cssH, cam) {
-    var pad = 10;
+    var pad = 4;
     var aw = Math.max(1, cssW - pad * 2);
     var ah = Math.max(1, cssH - pad * 2);
     var scale = Math.min(aw / cam.w, ah / cam.h);
     var dw = cam.w * scale;
     var dh = cam.h * scale;
-    return { scale: scale, ox: (cssW - dw) / 2, oy: (cssH - dh) / 2, cam: cam };
+    var ox = (cssW - dw) / 2;
+    var oy = (cssH - dh) / 2;
+    // A one-end window (half, zone, 3/4, stations) keeps the cut line on the
+    // right edge of the screen. Neutral and full stay centered.
+    var touchesLeft = cam.x <= 0.5;
+    var touchesRight = cam.x + cam.w >= RINK_L - 0.5;
+    if (touchesLeft !== touchesRight) ox = cssW - pad - dw;
+    return { scale: scale, ox: ox, oy: oy, cam: cam };
   }
   function worldFrom(px, py, t, flip) {
     var feetX = (px - t.ox) / t.scale;
@@ -776,6 +821,17 @@
     drawDot(ctx, 100, 42.5);
     drawDot(ctx, 80, 20.5); drawDot(ctx, 80, 64.5);
     drawDot(ctx, 120, 20.5); drawDot(ctx, 120, 64.5);
+    if (doc.view === "stations") {
+      ctx.save();
+      ctx.strokeStyle = "rgba(72, 80, 92, 0.78)";
+      ctx.lineWidth = 0.85;
+      ctx.setLineDash([1.8, 1.15]);
+      ctx.beginPath();
+      if (doc.flip) { ctx.moveTo(126, 42.5); ctx.lineTo(200, 42.5); }
+      else { ctx.moveTo(0, 42.5); ctx.lineTo(74, 42.5); }
+      ctx.stroke();
+      ctx.restore();
+    }
     ctx.restore();
     rinkPath(ctx);
     ctx.strokeStyle = "#1b2430";
@@ -1061,13 +1117,31 @@
     if (!doc.flip) ctx.setTransform(s, 0, 0, s, ox - t.cam.x * s, oy - t.cam.y * s);
     else ctx.setTransform(-s, 0, 0, s, ox + (t.cam.x + t.cam.w) * s, oy - t.cam.y * s);
   }
+  // Keep the painted line on the edge of the view. A small margin is added
+  // only where the window meets the boards, so the board stroke is not cut in half.
+  function clipCamera(ctx, cam) {
+    var m = 0.9;
+    var x0 = cam.x;
+    var y0 = cam.y;
+    var x1 = cam.x + cam.w;
+    var y1 = cam.y + cam.h;
+    if (x0 <= 0.5) x0 -= m;
+    if (x1 >= RINK_L - 0.5) x1 += m;
+    if (y0 <= 0.5) y0 -= m;
+    if (y1 >= RINK_W - 0.5) y1 += m;
+    ctx.beginPath();
+    ctx.rect(x0, y0, x1 - x0, y1 - y0);
+    ctx.clip();
+  }
   function drawScene(ctx, cssW, cssH, dpr) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, cssW, cssH);
     ctx.fillStyle = "#243140";
     ctx.fillRect(0, 0, cssW, cssH);
     var t = fit(cssW, cssH, doc.camera);
+    ctx.save();
     applyWorld(ctx, t, dpr);
+    clipCamera(ctx, t.cam);
     drawRink(ctx);
     var sel = state.selected;
     for (var i = 0; i < doc.marks.length; i++) {
@@ -1086,6 +1160,7 @@
       ctx.restore();
     }
     if (sel && sel.kind === "piece") drawSelection(ctx);
+    ctx.restore();
   }
   function draw() {
     if (!state.cssW || !state.cssH) return;
@@ -1775,7 +1850,7 @@
     for (var i = 0; i < nodes.length; i++) nodes[i].hidden = nodes[i].dataset.set !== doc.labelSet;
   }
   function syncPressed() {
-    var buttons = document.querySelectorAll("#bar button");
+    var buttons = document.querySelectorAll("#dock button");
     for (var i = 0; i < buttons.length; i++) {
       var b = buttons[i];
       var on = false;
@@ -1786,6 +1861,8 @@
       else if (b.dataset.act === "flip") on = !!doc.flip;
       b.classList.toggle("active", on);
     }
+    var viewSelect = document.getElementById("view");
+    if (viewSelect && VIEWS[doc.view]) viewSelect.value = doc.view;
     paintTeamBtn("home-btn", "home");
     paintTeamBtn("away-btn", "away");
     var labelBtn = document.getElementById("label-btn");
@@ -1848,12 +1925,11 @@
     } catch (e) { /* iPhone Chrome often rejects the lock. The rotate gate covers that. */ }
   }
 
-  document.getElementById("bar").addEventListener("click", function (e) {
+  document.getElementById("dock").addEventListener("click", function (e) {
     var btn = e.target.closest("button");
     if (!btn || btn.disabled) return;
     var act = btn.dataset.act;
-    if (act === "view") setView(btn.dataset.view);
-    else if (act === "flip") toggleFlip();
+    if (act === "flip") toggleFlip();
     else if (act === "tool") setTool(btn.dataset.tool);
     else if (act === "delete") deleteSelection();
     else if (act === "clear") clearIce();
@@ -1882,6 +1958,9 @@
     else if (act === "png") exportPng();
     else if (act === "export") exportJson();
     else if (act === "import") document.getElementById("import-file").click();
+  });
+  document.getElementById("view").addEventListener("change", function () {
+    if (VIEWS[this.value]) setView(this.value);
   });
   document.getElementById("stage").addEventListener("click", function (e) {
     var btn = e.target.closest("button");
@@ -2067,14 +2146,16 @@
     function check(name, cond, extra) {
       lines.push((cond ? "PASS " : "FAIL ") + name + (cond || !extra ? "" : " " + extra));
     }
-    check("half", homeCamera("half", false).w === 100 && homeCamera("half", false).x === 0);
-    check("zone", homeCamera("zone", false).w === 75 && homeCamera("zone", false).x === 0);
-    check("three", homeCamera("three", false).w === 125);
+    check("half", homeCamera("half", false).w === 102 && homeCamera("half", false).x === 0);
+    check("zone", homeCamera("zone", false).w === 77 && homeCamera("zone", false).x === 0);
+    check("three", homeCamera("three", false).w === 127);
     var neu = homeCamera("neutral", false);
-    check("neutral", neu.x === 46 && neu.x + neu.w === 154);
-    check("half flip", homeCamera("half", true).x === 100 && homeCamera("half", true).w === 100);
-    check("zone flip", homeCamera("zone", true).x === 125 && homeCamera("zone", true).w === 75);
-    check("three flip", homeCamera("three", true).x === 75 && homeCamera("three", true).w === 125);
+    check("neutral", neu.x === 45 && neu.x + neu.w === 155);
+    var stations = homeCamera("stations", false);
+    check("stations", stations.x === 0 && stations.w === 77);
+    check("half flip", homeCamera("half", true).x === 98 && homeCamera("half", true).w === 102);
+    check("zone flip", homeCamera("zone", true).x === 123 && homeCamera("zone", true).w === 77);
+    check("three flip", homeCamera("three", true).x === 73 && homeCamera("three", true).w === 127);
     var t = fit(800, 680, homeCamera("half", false));
     var back = worldFrom(screenFrom(11, 42.5, t, false).x, screenFrom(11, 42.5, t, false).y, t, false);
     check("roundtrip", Math.abs(back.x - 11) < 0.01 && Math.abs(back.y - 42.5) < 0.01);

@@ -1,4 +1,4 @@
-var CACHE = "rink-board-v3";
+var CACHE = "rink-board-v4";
 var ASSETS = ["./index.html", "./manifest.webmanifest"];
 
 self.addEventListener("install", function (event) {
