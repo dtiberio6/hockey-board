@@ -775,7 +775,7 @@
   function pieceHitRadius(p) {
     if (p.type === "skater") return (p.role === "G" ? 2.65 : 2.15) + (DEFENSE[p.role] ? 1.35 : 0.3);
     if (p.type === "puck") return 1.5;
-    if (p.type === "pile") return 1.8;
+    if (p.type === "pile") return 2.1;
     if (p.type === "cone" || p.type === "tire") return 2.4;
     if (p.type === "net") return 4;
     if (p.type === "text") return Math.max(2.4, ((p.text || "").length * 1.2) / 2 + 1.2);
@@ -1162,15 +1162,21 @@
       ctx.strokeStyle = "#4a4a4a";
       ctx.stroke();
     } else if (p.type === "pile") {
-      var blobs = [[-0.5, 0.18], [0.42, 0.22], [-0.05, -0.42]];
+      var blobs = [[-0.12, -0.78], [0.62, -0.28], [-0.78, -0.02], [0.02, 0.22], [0.46, 0.7]];
       for (var b = 0; b < blobs.length; b++) {
+        var bx = p.x + blobs[b][0];
+        var by = p.y + blobs[b][1];
         ctx.beginPath();
-        ctx.arc(p.x + blobs[b][0], p.y + blobs[b][1], 0.42, 0, Math.PI * 2);
+        ctx.arc(bx, by, 0.5, 0, Math.PI * 2);
         ctx.fillStyle = "#161616";
         ctx.fill();
-        ctx.lineWidth = 0.08;
-        ctx.strokeStyle = "#5a5a5a";
+        ctx.lineWidth = 0.12;
+        ctx.strokeStyle = "#6a6a6a";
         ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(bx - 0.14, by - 0.14, 0.12, 0, Math.PI * 2);
+        ctx.fillStyle = "#3a3a3a";
+        ctx.fill();
       }
     } else if (p.type === "cone") {
       ctx.beginPath();
