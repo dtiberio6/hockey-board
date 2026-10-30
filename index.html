@@ -85,6 +85,7 @@
   #dock button.edit { background: #1c3330; }
   #dock button.labelset { background: #3a3424; }
   #draw-btn.active { box-shadow: inset 0 0 0 3px #fff; }
+  #tools .agroup { display: contents; }
   #tools .glabel {
     flex: none;
     display: flex;
@@ -150,7 +151,7 @@
     #tools > button { min-height: 42px; height: 42px; }
     #tools .glabel, #tools .palette, #tools .span2 { grid-column: 1 / -1; width: auto; margin-left: 0; border-left: 0; }
     #tools .glabel { height: 16px; align-items: flex-end; padding: 0 2px; border-top: 1px solid #2c3a4c; }
-    #tools .glabel:first-child { border-top: 0; }
+    #tools > .glabel:first-child { border-top: 0; }
     #tools .palette { height: 26px; }
     #dock button { width: 100%; min-width: 0; height: 46px; padding: 0 2px; }
   }
@@ -198,8 +199,21 @@
     #dock button { width: auto; min-width: 0; height: 34px; padding: 0 4px; font-size: 12px; }
     #bar button { flex: 1 1 0; min-width: 0; padding: 0 2px; overflow: hidden; }
     #tools .glabel { display: none; }
+    #tools .agroup {
+      grid-column: 1 / -1;
+      grid-row: span 3;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: repeat(3, minmax(0, 1fr));
+      gap: 3px;
+      min-width: 0;
+      min-height: 0;
+      height: 100%;
+    }
+    #tools > #draw-btn { grid-column: 1 / -1; }
     #tools > button[hidden] { display: none; }
-    #tools > button {
+    #tools > button,
+    #tools .agroup > button {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -409,12 +423,15 @@
       <button type="button" class="piece" data-act="place" data-type="net">Net</button>
       <button type="button" class="piece" data-act="place" data-type="tire">Tire</button>
       <button type="button" class="piece" data-act="place" data-type="text">Text</button>
+      <div class="agroup">
       <div class="glabel actions">Actions</div>
       <button type="button" class="action" data-act="tool" data-tool="skate">Skate</button>
       <button type="button" class="action" data-act="tool" data-tool="carry" aria-label="Skate with puck">Carry</button>
       <button type="button" class="action" data-act="tool" data-tool="back" aria-label="Backwards skate">Back</button>
+      <button type="button" class="action" data-act="tool" data-tool="bcarry" aria-label="Backwards carry">B-Carry</button>
       <button type="button" class="action" data-act="tool" data-tool="pass">Pass</button>
       <button type="button" class="action" data-act="tool" data-tool="shot">Shot</button>
+      </div>
       <div class="glabel draw">Draw</div>
       <button type="button" class="ink span2" id="draw-btn" data-act="tool" data-tool="draw">Draw</button>
       <div class="palette" role="group" aria-label="Draw color">
@@ -517,7 +534,7 @@
   var PUCK_OY = 1.5;
   var LIB_KEY = "rink-board-drills";
   var CUR_KEY = "rink-board-current";
-  var MARKS = { skate: 1, carry: 1, pass: 1, shot: 1, back: 1, draw: 1 };
+  var MARKS = { skate: 1, carry: 1, pass: 1, shot: 1, back: 1, bcarry: 1, draw: 1 };
 
   var ice = document.getElementById("ice");
   var stage = document.getElementById("stage");
@@ -1038,6 +1055,27 @@
     }
     if (moved) ctx.stroke();
   }
+  function wavePoints(pts) {
+    var amp = 0.95, wave = 7, travel = 0, out = [];
+    if (!pts || pts.length < 2) return out;
+    for (var s = 1; s < pts.length; s++) {
+      var x1 = pts[s - 1].x, y1 = pts[s - 1].y;
+      var x2 = pts[s].x, y2 = pts[s].y;
+      var dx = x2 - x1, dy = y2 - y1;
+      var len = Math.hypot(dx, dy);
+      if (len < 0.05) continue;
+      var ux = dx / len, uy = dy / len;
+      var px = -uy, py = ux;
+      var steps = Math.max(2, Math.ceil(len / 0.6));
+      for (var i = 0; i <= steps; i++) {
+        var t = (i / steps) * len;
+        var off = Math.sin(((travel + t) / wave) * Math.PI * 2) * amp;
+        out.push({ x: x1 + ux * t + px * off, y: y1 + uy * t + py * off });
+      }
+      travel += len;
+    }
+    return out;
+  }
   function markInk(m) {
     if (m && (m.team === "home" || m.team === "away")) return teamFill(m.team);
     return (m && m.color) || "#1a1a1a";
@@ -1060,12 +1098,21 @@
     var head = m.type === "shot" ? 3.3 : 2.4;
     var last = m.points[m.points.length - 1];
     var prev = m.points[m.points.length - 2];
+    var arrowA = prev, arrowB = last;
     ctx.lineWidth = 0.36 + boost;
-    if (m.type === "skate" || m.type === "carry" || m.type === "back") {
+    if (m.type === "skate" || m.type === "carry" || m.type === "back" || m.type === "bcarry") {
       var body = shortenPath(m.points, head * 0.62);
-      if (m.type === "back") {
+      if (m.type === "back" || m.type === "bcarry") {
         ctx.lineWidth = 0.4 + boost;
-        drawParens(ctx, body);
+        if (m.type === "bcarry") {
+          var wavy = wavePoints(body);
+          var tip = wavePoints(m.points);
+          drawParens(ctx, wavy.length >= 2 ? wavy : body);
+          if (tip.length >= 2) {
+            arrowA = tip[tip.length - 2];
+            arrowB = tip[tip.length - 1];
+          }
+        } else drawParens(ctx, body);
       } else {
         strokeSmooth(ctx, body);
         if (m.type === "carry") {
@@ -1099,7 +1146,7 @@
         ctx.setLineDash([]);
       }
     }
-    if (!boost) drawArrowHead(ctx, prev.x, prev.y, last.x, last.y, head);
+    if (!boost) drawArrowHead(ctx, arrowA.x, arrowA.y, arrowB.x, arrowB.y, head);
     ctx.restore();
   }
   function drawLabel(ctx, text, x, y, color, maxW) {
@@ -1323,7 +1370,7 @@
     return !!(suppressGhost && world && Math.hypot(world.x - suppressGhost.x, world.y - suppressGhost.y) < 3.2);
   }
   function isTrace(tool) {
-    return tool === "draw" || tool === "skate" || tool === "carry" || tool === "back";
+    return tool === "draw" || tool === "skate" || tool === "carry" || tool === "back" || tool === "bcarry";
   }
 
   function removeSelectedFromDoc(hit) {
@@ -2447,6 +2494,11 @@
     var back = doc.marks[doc.marks.length - 1];
     check("back trace", back && back.type === "back" && back.points.length === 2);
     check("back not selected", state.selected == null);
+    state.tool = "bcarry";
+    commitInk({ x: 40, y: 8 }, [{ x: 40, y: 8 }, { x: 62, y: 8 }]);
+    var bcarry = doc.marks[doc.marks.length - 1];
+    check("bcarry trace", bcarry && bcarry.type === "bcarry" && bcarry.points.length === 2);
+    check("bcarry not selected", state.selected == null);
     state.tool = "place";
     state.selected = { kind: "piece", id: "gone" };
     state.cssW = 400;
@@ -2501,7 +2553,8 @@
     ];
     doc.marks = [
       { id: "c", type: "carry", color: "#1a1a1a", points: [{ x: 50, y: 42 }, { x: 70, y: 42 }] },
-      { id: "bk", type: "back", team: "home", color: "#1a1a1a", points: [{ x: 8, y: 74 }, { x: 28, y: 74 }] }
+      { id: "bk", type: "back", team: "home", color: "#1a1a1a", points: [{ x: 8, y: 74 }, { x: 28, y: 74 }] },
+      { id: "bc", type: "bcarry", team: "home", color: "#1a1a1a", points: [{ x: 40, y: 8 }, { x: 62, y: 8 }] }
     ];
     state.selected = null;
     state.preview = null;
@@ -2540,6 +2593,10 @@
     var parenGap = at(9.8, 74);
     check("back paren", paren && !isIcePixel(paren), rgb(paren));
     check("back has no shaft", parenGap && isIcePixel(parenGap), rgb(parenGap));
+    var bcrest = at(47.44, 9.0);
+    var bchord = at(49.26, 8);
+    check("bcarry wave", bcrest && !isIcePixel(bcrest), rgb(bcrest));
+    check("bcarry has no shaft", bchord && isIcePixel(bchord), rgb(bchord));
 
     var failed = lines.some(function (line) { return line.indexOf("FAIL") === 0; });
     var passed = lines.filter(function (line) { return line.indexOf("PASS") === 0; }).length;
