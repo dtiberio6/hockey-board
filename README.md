@@ -14,7 +14,7 @@ The rink view is the dropdown. Half ends on the center line. Zone ends on the ne
 
 On a phone, teams, pieces, actions, draw, and edit fill the left edge in three columns, so the whole set stays on screen. The name, view, and file buttons are one short row under the rink. On a computer, the labeled panel stays on the left. Draw uses the color you pick.
 
-Three label sets. Pos is G, LD, RD, LW, C, RW. Unit is G, D1, D2, F1, F2, F3. XO is X and O for drill markings, and you can place as many as you need. Named players are one per team: a second click moves the one already on the ice. Defense get a dark ring. Both goalies are gray.
+Three label sets. Pos is G, LD, RD, LW, C, RW. Unit is G, D1, D2, F1, F2, F3. XO is X, O, and a black Coach with white letters. You can place as many of those as you need. Named players are one per team: a second click moves the one already on the ice. Defense get a dark ring. Both goalies are gray.
 
 Home and Away are solid colors you can tell apart. Tap a team to place it. Tap the active team again to change its color. The mouse wheel over the ice changes which player is armed, and the marker follows the cursor until you click.
 

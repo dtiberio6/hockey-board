@@ -79,6 +79,8 @@
   #dock button.swatch { box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); min-width: 44px; }
   #dock button.swatch.active { box-shadow: inset 0 0 0 3px #fff; }
   #dock button.piece { background: #1b3044; }
+  #dock button.coach { background: #1a1a1a; color: #fff; }
+  #dock button.coach.active { background: #e2b340; color: #1c1404; }
   #dock button.action { background: #2c2440; }
   #dock button.edit { background: #1c3330; }
   #dock button.labelset { background: #3a3424; }
@@ -400,6 +402,7 @@
       <button type="button" class="piece" data-act="place" data-type="skater" data-role="F3" data-set="units">F3</button>
       <button type="button" class="piece" data-act="place" data-type="skater" data-role="X" data-set="xo">X</button>
       <button type="button" class="piece" data-act="place" data-type="skater" data-role="O" data-set="xo">O</button>
+      <button type="button" class="piece coach" data-act="place" data-type="skater" data-role="Coach" data-set="xo" aria-label="Coach">Coach</button>
       <button type="button" class="piece" data-act="place" data-type="puck">Puck</button>
       <button type="button" class="piece" data-act="place" data-type="pile" aria-label="Pile of pucks">Pile</button>
       <button type="button" class="piece" data-act="place" data-type="cone">Cone</button>
@@ -612,7 +615,7 @@
   }
   function rolesFor(set) {
     if (set === "units") return ["G", "D1", "D2", "F1", "F2", "F3"];
-    if (set === "xo") return ["X", "O"];
+    if (set === "xo") return ["X", "O", "Coach"];
     return ["G", "LD", "RD", "LW", "C", "RW"];
   }
   function normalizePiece(p) {
@@ -1119,11 +1122,12 @@
     ctx.save();
     if (p.type === "skater") {
       var goalie = p.role === "G";
+      var coach = p.role === "Coach";
       var defense = !!DEFENSE[p.role];
       var r = goalie ? 2.65 : 2.15;
-      var fill = goalie ? GOALIE : teamFill(p.team);
-      var ink = goalie ? "#3e4750" : "#1a1a1a";
-      var text = goalie ? "#1b1e22" : inkFor(fill);
+      var fill = coach ? "#1a1a1a" : (goalie ? GOALIE : teamFill(p.team));
+      var ink = coach ? "#1a1a1a" : (goalie ? "#3e4750" : "#1a1a1a");
+      var text = coach ? "#ffffff" : (goalie ? "#1b1e22" : inkFor(fill));
       ctx.fillStyle = "rgba(20,30,40,0.18)";
       ctx.beginPath();
       ctx.ellipse(p.x + 0.28, p.y + 0.5, r * 0.8, r * 0.36, 0, 0, Math.PI * 2);
@@ -1142,7 +1146,7 @@
       ctx.lineWidth = 0.18;
       ctx.strokeStyle = ink;
       ctx.stroke();
-      drawLabel(ctx, p.role || "", p.x, p.y, goalie ? "#1b1e22" : text, r * 1.7);
+      drawLabel(ctx, coach ? "Coach" : (p.role || ""), p.x, p.y, coach ? "#ffffff" : (goalie ? "#1b1e22" : text), r * 1.75);
       if (puckOf(p.id)) {
         ctx.beginPath();
         ctx.arc(p.x, p.y, r + (defense ? 1.6 : 0.72), 0, Math.PI * 2);
@@ -2031,7 +2035,7 @@
     paintDrawBtn();
     var labelBtn = document.getElementById("label-btn");
     var labelName = doc.labelSet === "units" ? "Unit" : (doc.labelSet === "xo" ? "XO" : "Pos");
-    var labelHelp = doc.labelSet === "positions" ? "Positions. Switch to units" : (doc.labelSet === "units" ? "Units. Switch to X and O" : "X and O. Switch to positions");
+    var labelHelp = doc.labelSet === "positions" ? "Positions. Switch to units" : (doc.labelSet === "units" ? "Units. Switch to X and O" : "X, O, and Coach. Switch to positions");
     labelBtn.textContent = labelName;
     labelBtn.setAttribute("aria-label", labelHelp);
     syncChips();
@@ -2396,6 +2400,7 @@
     });
     check("us is home", migrated.pieces[0].team === "home" && migrated.pieces[1].team === "away");
     check("xo set", migrated.labelSet === "xo" && migrated.homeColor === "#009E73");
+    check("xo roles", rolesFor("xo").join(",") === "X,O,Coach");
     check("net faces center", migrated.pieces[2].facing === 1);
     var segs = faceoffSegments(31, 20.5);
     function hasSeg(x1, y1, x2, y2) {
@@ -2456,6 +2461,11 @@
     dropPiece({ x: 8, y: 8 });
     dropPiece({ x: 12, y: 8 });
     check("many X", doc.pieces.length === beforeX + 2);
+    state.placeRole = "Coach";
+    var beforeCoach = doc.pieces.length;
+    dropPiece({ x: 6, y: 12 });
+    dropPiece({ x: 10, y: 12 });
+    check("many coach", doc.pieces.length === beforeCoach + 2);
     var net = { id: "net", type: "net", x: 40, y: 40, facing: 1 };
     flipNet(net);
     check("net flip", net.facing === -1);
@@ -2486,7 +2496,8 @@
       { id: "rw", type: "skater", x: 58, y: 42, team: "home", role: "RW" },
       { id: "g", type: "skater", x: 18, y: 28, team: "home", role: "G" },
       { id: "gt", type: "skater", x: 18, y: 58, team: "away", role: "G" },
-      { id: "f2", type: "skater", x: 70, y: 50, team: "away", role: "F2" }
+      { id: "f2", type: "skater", x: 70, y: 50, team: "away", role: "F2" },
+      { id: "coach", type: "skater", x: 84, y: 14, team: "home", role: "Coach" }
     ];
     doc.marks = [
       { id: "c", type: "carry", color: "#1a1a1a", points: [{ x: 50, y: 42 }, { x: 70, y: 42 }] },
@@ -2516,6 +2527,8 @@
     check("RW no ring", rwOuter && isIcePixel(rwOuter), rgb(rwOuter));
     check("away solid", awayFill && awayFill[0] > 170 && awayFill[1] < 150 && awayFill[2] < 80, rgb(awayFill));
     check("goalie gray", gFill && gFill[0] > 140 && gFill[0] < 210 && Math.abs(gFill[0] - gFill[2]) < 40, rgb(gFill));
+    var coachFill = at(84, 15.6);
+    check("coach black", coachFill && coachFill[0] < 40 && coachFill[1] < 40 && coachFill[2] < 40, rgb(coachFill));
     check("their goalie gray", gtFill && gtFill[0] > 140 && gtFill[0] < 210, rgb(gtFill));
     check("hash red", hash && hash[0] > 150 && hash[0] > hash[1] && hash[0] > hash[2], rgb(hash));
     check("old hash gone", oldHash && isIcePixel(oldHash), rgb(oldHash));
