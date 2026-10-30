@@ -1055,6 +1055,13 @@
     }
     if (moved) ctx.stroke();
   }
+  function drawPuckLine(ctx, pts) {
+    ctx.save();
+    ctx.strokeStyle = "#161616";
+    ctx.lineWidth = 0.18;
+    drawWave(ctx, pts);
+    ctx.restore();
+  }
   function markInk(m) {
     if (m && (m.team === "home" || m.team === "away")) return teamFill(m.team);
     return (m && m.color) || "#1a1a1a";
@@ -1084,16 +1091,10 @@
       if (m.type === "back" || m.type === "bcarry") {
         ctx.lineWidth = 0.4 + boost;
         drawParens(ctx, body);
-        if (m.type === "bcarry") {
-          ctx.lineWidth = 0.3 + boost;
-          drawWave(ctx, body);
-        }
+        if (m.type === "bcarry") drawPuckLine(ctx, body);
       } else {
         strokeSmooth(ctx, body);
-        if (m.type === "carry") {
-          ctx.lineWidth = 0.3 + boost;
-          drawWave(ctx, body);
-        }
+        if (m.type === "carry") drawPuckLine(ctx, body);
       }
     } else {
       var a = m.points[0];
@@ -2527,7 +2528,7 @@
       { id: "coach", type: "skater", x: 84, y: 14, team: "home", role: "Coach" }
     ];
     doc.marks = [
-      { id: "c", type: "carry", color: "#1a1a1a", points: [{ x: 50, y: 42 }, { x: 70, y: 42 }] },
+      { id: "c", type: "carry", team: "home", color: "#1a1a1a", points: [{ x: 50, y: 42 }, { x: 70, y: 42 }] },
       { id: "bk", type: "back", team: "home", color: "#1a1a1a", points: [{ x: 8, y: 74 }, { x: 28, y: 74 }] },
       { id: "bc", type: "bcarry", team: "home", color: "#1a1a1a", points: [{ x: 40, y: 8 }, { x: 62, y: 8 }] }
     ];
@@ -2561,9 +2562,9 @@
     check("hash red", hash && hash[0] > 150 && hash[0] > hash[1] && hash[0] > hash[2], rgb(hash));
     check("old hash gone", oldHash && isIcePixel(oldHash), rgb(oldHash));
     var wave = at(51.75, 42.95);
-    var shaft = at(60, 42);
-    check("carry wave", wave && !isIcePixel(wave), rgb(wave));
-    check("carry shaft", shaft && !isIcePixel(shaft), rgb(shaft));
+    var shaft = at(51.75, 42);
+    check("carry wave", wave && wave[0] < 190 && Math.abs(wave[0] - wave[1]) < 20 && Math.abs(wave[1] - wave[2]) < 20, rgb(wave));
+    check("carry shaft", shaft && shaft[2] > shaft[0] + 30 && shaft[2] > 80 && shaft[0] < 80, rgb(shaft));
     var paren = at(9.05, 74.52);
     var parenGap = at(9.05, 74);
     check("back paren", paren && !isIcePixel(paren), rgb(paren));
@@ -2571,8 +2572,8 @@
     var bcrest = at(41.75, 8.95);
     var bparen = at(45.25, 8.52);
     var bchord = at(45.25, 8);
-    check("bcarry wave", bcrest && !isIcePixel(bcrest), rgb(bcrest));
-    check("bcarry paren", bparen && !isIcePixel(bparen), rgb(bparen));
+    check("bcarry wave", bcrest && bcrest[0] < 190 && Math.abs(bcrest[0] - bcrest[1]) < 20 && Math.abs(bcrest[1] - bcrest[2]) < 20, rgb(bcrest));
+    check("bcarry paren", bparen && bparen[2] > bparen[0] + 30 && bparen[2] > 80 && bparen[0] < 90, rgb(bparen));
     check("bcarry has no shaft", bchord && isIcePixel(bchord), rgb(bchord));
 
     var failed = lines.some(function (line) { return line.indexOf("FAIL") === 0; });

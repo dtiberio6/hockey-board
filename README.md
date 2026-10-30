@@ -20,7 +20,7 @@ Home and Away are solid colors you can tell apart. Tap a team to place it. Tap t
 
 Drop a puck on a player, or drag one onto a player, and it stays with them. That player gets a yellow ring. Only one puck is assigned. The rest, and a pile of five pucks, sit loose. Right-click a player and choose Assign puck to move the assigned puck to them. A pass moves it to the player at the end of the line. A shot puts it in the net.
 
-Skate, Carry, Back, B-Carry, Pass, and Shot follow the color of the team that makes the play. Back is backwards skating, drawn as alternating parentheses set close together. B-Carry is those parentheses with the thin carry wave running through them. A shot is a double line. Draw still uses the color chips. Right-click and drag moves a piece. Right-click without dragging asks Erase?, and a net can be flipped from that menu.
+Skate, Carry, Back, B-Carry, Pass, and Shot follow the color of the team that makes the play. The wavy puck path on Carry and B-Carry is thinner and black, like the puck. Back is backwards skating, drawn as alternating parentheses set close together. B-Carry is those parentheses with that black puck wave running through them. A shot is a double line. Draw still uses the color chips. Right-click and drag moves a piece. Right-click without dragging asks Erase?, and a net can be flipped from that menu.
 
 Select a piece or a line, then Delete. Erase removes whatever you tap, one after another. Clear asks you to tap again so a miss does not wipe the drill. Undo brings it back.
 
