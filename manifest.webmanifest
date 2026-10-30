@@ -2,7 +2,7 @@
   "name": "Rink Board",
   "short_name": "Rink Board",
   "start_url": "./",
-  "display": "standalone",
+  "display": "fullscreen",
   "background_color": "#121820",
   "theme_color": "#121820",
   "orientation": "any"

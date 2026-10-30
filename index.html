@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#121820">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Rink Board</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -273,10 +274,22 @@
   }
   #gate h1 { margin: 0; font-size: 28px; font-weight: 800; }
   #gate p { margin: 0; font-size: 18px; font-weight: 600; color: #c5d0de; }
+  #gate button {
+    margin-top: 8px;
+    height: 48px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 12px;
+    background: #e2b340;
+    color: #1c1404;
+    font: 800 16px/1 system-ui, sans-serif;
+  }
   @media (max-width: 700px) and (orientation: portrait) {
     #gate { display: flex; }
     #app { visibility: hidden; }
   }
+  body.need-fill #gate { display: flex; }
+  body.need-fill #app { visibility: hidden; }
   .sheet {
     position: absolute;
     z-index: 6;
@@ -391,7 +404,8 @@
 <body>
   <div id="gate">
     <h1>Rink Board</h1>
-    <p>Turn your phone sideways</p>
+    <p id="gate-msg">Turn your phone sideways</p>
+    <button type="button" id="gate-btn">Fill the screen</button>
   </div>
   <div id="app">
     <div id="dock">
@@ -2113,14 +2127,50 @@
     document.getElementById("sheet").classList.remove("open");
     document.getElementById("notesheet").classList.remove("open");
   }
-  function requestLandscape() {
-    var shortSide = Math.min(screen.width, screen.height);
-    if (shortSide > 700) return;
+  function isPhone() {
+    if (Math.min(screen.width, screen.height) > 700) return false;
+    if (window.matchMedia("(pointer: coarse)").matches) return true;
+    return navigator.maxTouchPoints > 0 && window.matchMedia("(hover: none)").matches;
+  }
+  function installedApp() {
+    return window.matchMedia("(display-mode: standalone)").matches
+      || window.matchMedia("(display-mode: fullscreen)").matches
+      || window.navigator.standalone === true;
+  }
+  function lockLandscape() {
     try {
       if (screen.orientation && screen.orientation.lock) {
         screen.orientation.lock("landscape").catch(function () {});
       }
-    } catch (e) { /* iPhone Chrome often rejects the lock. The rotate gate covers that. */ }
+    } catch (e) { /* iPhone rejects the lock. The rotate gate covers that. */ }
+  }
+  function fillScreen() {
+    if (!isPhone()) return;
+    var root = document.documentElement;
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      lockLandscape();
+      return;
+    }
+    var pending = null;
+    try {
+      if (root.requestFullscreen) pending = root.requestFullscreen({ navigationUI: "hide" });
+      else if (root.webkitRequestFullscreen) root.webkitRequestFullscreen();
+    } catch (e) {
+      try { if (root.requestFullscreen) pending = root.requestFullscreen(); } catch (e2) {}
+    }
+    if (pending && pending.then) pending.then(lockLandscape, lockLandscape);
+    else lockLandscape();
+  }
+  function syncFillGate() {
+    var msg = document.getElementById("gate-msg");
+    var landscape = window.matchMedia("(orientation: landscape)").matches;
+    if (msg) msg.textContent = landscape ? "Tap to use the full screen" : "Turn your phone sideways";
+    var full = document.fullscreenElement || document.webkitFullscreenElement;
+    if (!isPhone() || installedApp() || full) document.body.classList.remove("need-fill");
+  }
+  function openPhoneScreen() {
+    fillScreen();
+    if (window.matchMedia("(orientation: landscape)").matches) document.body.classList.remove("need-fill");
   }
 
   document.getElementById("dock").addEventListener("click", function (e) {
@@ -2292,7 +2342,9 @@
       draw();
     }
   });
-  ice.addEventListener("pointerdown", requestLandscape);
+  document.getElementById("gate").addEventListener("click", openPhoneScreen);
+  document.addEventListener("fullscreenchange", function () { syncFillGate(); resize(); });
+  document.addEventListener("webkitfullscreenchange", function () { syncFillGate(); resize(); });
 
   function resize() {
     var rect = stage.getBoundingClientRect();
@@ -2305,7 +2357,7 @@
   }
   if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
   window.addEventListener("resize", resize);
-  window.addEventListener("orientationchange", resize);
+  window.addEventListener("orientationchange", function () { syncFillGate(); resize(); });
 
   function seedDemo() {
     doc = blank();
@@ -2597,7 +2649,8 @@
   if (params.has("demo")) seedDemo();
   syncForm();
   resize();
-  requestLandscape();
+  if (isPhone() && !installedApp()) document.body.classList.add("need-fill");
+  syncFillGate();
   if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
     navigator.serviceWorker.register("sw.js").catch(function () {});
   }

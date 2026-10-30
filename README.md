@@ -26,6 +26,8 @@ Select a piece or a line, then Delete. Erase removes whatever you tap, one after
 
 Pinch to zoom. Two fingers pan. One finger draws or places. Right-drag moves a piece.
 
+On a phone, tap Fill the screen. That hides the browser bars, and on Android it also turns the phone sideways. An iPhone still has to be turned by hand. The iPad is left free to rotate.
+
 ## Drills
 
 Save stores the drill on that device. Drills, then a name, opens it again. Export writes a file you can send to your other device. Import reads it back. Image saves a picture of the ice for a group text.
